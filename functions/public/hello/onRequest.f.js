@@ -7,7 +7,7 @@ const cors = require('cors')({ origin: true });
 exports = module.exports = functions
     .runWith({
         // Ensure the function has enough memory and time to process
-        timeoutSeconds: 540,
+        timeoutSeconds: 120,
         memory: "1GB",
     })
     .https
