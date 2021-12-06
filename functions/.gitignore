@@ -1,1 +1,4 @@
 node_modules/
+
+# Firebase functions local config for emulator
+.runtimeconfig.json
