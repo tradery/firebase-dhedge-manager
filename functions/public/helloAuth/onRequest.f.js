@@ -12,7 +12,7 @@ function error(response, statusCode, message) {
 }
 
 /**
- * Simple Hello World test
+ * Authenticated Hello World test
  */
 exports = module.exports = functions
     .runWith({
@@ -37,9 +37,6 @@ exports = module.exports = functions
                     "Unauthorized. The API key provided is invalid.");
                 
                 // Authorized!
-                
-
-
                 response.status(200).send({ message: 'Authorized!' });
             } catch (err) {
                 functions.logger.error(err);
