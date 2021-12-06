@@ -1,7 +1,7 @@
 const functions = require('firebase-functions');
 const cors = require('cors')({ origin: true });
 const { DateTime } = require("luxon");
-const tokenset = require("set.js");
+const Set = require('set.js').default;
 
 function error(response, statusCode, message) {
     response.status(statusCode).send({
@@ -38,13 +38,30 @@ exports = module.exports = functions
                     "Unauthorized. The API key provided is invalid.");
                     
                 // Authorized!
-                
+                const setConfig = {
+                    ethersProvider: '',
+                    web3Provider: '',
+                    basicIssuanceModuleAddress: '',
+                    controllerAddress: '',
+                    masterOracleAddress: '',
+                    navIssuanceModuleAddress: '',
+                    protocolViewerAddress: '',
+                    setTokenCreatorAddress: '',
+                    streamingFeeModuleAddress: '',
+                    tradeModuleAddress: '',
+                    governanceModuleAddress: '',
+                    debtIssuanceModuleAddress: '',
+                    zeroExApiKey: '',
+                    debtIssuanceModuleV2Address: ''
+                };
+                const tokenSet = Set(setConfig);
+                console.log(tokenSet);
 
 
                 response.status(200).send({ message: 'Authorized!' });
             } catch (err) {
                 functions.logger.error(err);
-                return error(response, 401, err);
+                return error(response, 401, err.message);
             }
             
             // Terminate the function
