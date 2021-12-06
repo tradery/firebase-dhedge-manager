@@ -1,6 +1,7 @@
 const functions = require('firebase-functions');
 const cors = require('cors')({ origin: true });
 const { DateTime } = require("luxon");
+const tokenset = require("set.js");
 
 function error(response, statusCode, message) {
     response.status(statusCode).send({
@@ -35,8 +36,11 @@ exports = module.exports = functions
 
                 if (authorization !== functions.config().auth.key) return error(response, 403, 
                     "Unauthorized. The API key provided is invalid.");
-                
+                    
                 // Authorized!
+                
+
+
                 response.status(200).send({ message: 'Authorized!' });
             } catch (err) {
                 functions.logger.error(err);
