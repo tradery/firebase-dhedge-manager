@@ -1,8 +1,5 @@
 {
   "devDependencies": {
     "eslint-plugin-promise": "^5.2.0"
-  },
-  "dependencies": {
-    "luxon": "^2.1.1"
   }
 }
