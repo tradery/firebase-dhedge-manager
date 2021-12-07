@@ -25,8 +25,8 @@ exports = module.exports = functions
         cors(request, response, async () => {
             try {
                 // Force POST
-                if (request.method !== "POST") return error(response, 401, 
-                    "Unauthorized. Request method must be POST.");
+                if (request.method !== "POST") return error(response, 400, 
+                    "Request method must be POST.");
             
                 // Handle Auth
                 const { authorization }  = request.headers;
@@ -38,12 +38,12 @@ exports = module.exports = functions
                 
                 // Authorized!
                 response.status(200).send({ message: 'Authorized!' });
+
+                // Termininate the function
+                response.end();
             } catch (err) {
                 functions.logger.error(err, { structuredData: true });
-                response.status(400).send(err);
+                return error(response, 400, err.message);
             }
-
-            // Termininate the function
-            response.end();
         })
     });
