@@ -33,7 +33,10 @@ exports = module.exports = functions
                 if (!authorization) return error(response, 403, 
                     "Unauthorized. A key must be provided in the `authorization` header.");
 
-                if (authorization !== functions.config().auth.key) return error(response, 403, 
+                const config = functions.config();
+                functions.logger.info(functions.config().auth.key);
+                
+                if (authorization !== config.auth.key) return error(response, 403, 
                     "Unauthorized. The API key provided is invalid.");
                 
                 // Authorized!

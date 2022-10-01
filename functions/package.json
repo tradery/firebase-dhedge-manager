@@ -14,6 +14,7 @@
   },
   "main": "index.js",
   "dependencies": {
+    "@alch/alchemy-web3": "^1.1.9",
     "camelcase": "^6.2.1",
     "cors": "^2.8.5",
     "firebase-admin": "^9.12.0",

@@ -1,4 +1,32 @@
 {
+  "name": "firebase-set-manager",
+  "version": "1.0.0",
+  "description": "An API that allows data scientists to effortlessly send trading signals to the Set protocol.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AslanGoldenhour/firebase-set-manager.git"
+  },
+  "keywords": [
+    "tokensets",
+    "set",
+    "firebase",
+    "set.js",
+    "ERC20",
+    "polygon"
+  ],
+  "author": "Aslan Goldenhour",
+  "license": "GPL-3.0-or-later",
+  "bugs": {
+    "url": "https://github.com/AslanGoldenhour/firebase-set-manager/issues"
+  },
+  "homepage": "https://github.com/AslanGoldenhour/firebase-set-manager#readme",
+  "dependencies": {
+    "set.js": "^0.4.2"
+  },
   "devDependencies": {
     "eslint-plugin-promise": "^5.2.0"
   }
