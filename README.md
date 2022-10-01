@@ -1,5 +1,5 @@
-# firebase-set-manager
-An API that allows data scientists to effortlessly send trading signals to the Set protocol.
+# dHedge Manager for Firebase Functions
+An API that allows data scientists to effortlessly send trading signals to the dHedge protocol.
 
 ### Notes on functions
 - Functions are in the `./functions` folder
