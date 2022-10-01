@@ -1,32 +1,30 @@
 {
-  "name": "firebase-set-manager",
+  "name": "firebase-dhedge-manager",
   "version": "1.0.0",
-  "description": "An API that allows data scientists to effortlessly send trading signals to the Set protocol.",
+  "description": "An API that allows data scientists to effortlessly send trading signals to the dHedge protocol.",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/AslanGoldenhour/firebase-set-manager.git"
+    "url": "git+https://github.com/tradery/firebase-dhedge-manager.git"
   },
   "keywords": [
-    "tokensets",
-    "set",
+    "dhedge",
+    "toros",
+    "synthetix",
     "firebase",
-    "set.js",
+    "dhedge-sdk",
     "ERC20",
     "polygon"
   ],
   "author": "Aslan Goldenhour",
   "license": "GPL-3.0-or-later",
   "bugs": {
-    "url": "https://github.com/AslanGoldenhour/firebase-set-manager/issues"
+    "url": "https://github.com/tradery/firebase-dhedge-manager/issues"
   },
-  "homepage": "https://github.com/AslanGoldenhour/firebase-set-manager#readme",
-  "dependencies": {
-    "set.js": "^0.4.2"
-  },
+  "homepage": "https://github.com/tradery/firebase-dhedge-manager#readme",
   "devDependencies": {
     "eslint-plugin-promise": "^5.2.0"
   }
