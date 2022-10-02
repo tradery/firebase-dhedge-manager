@@ -1,6 +1,6 @@
 const functions = require('firebase-functions');
 const cors = require('cors')({ origin: true });
-const helpers = require('./../../libs/helpers');
+const helpers = require('../../libs/helpers');
 
 /**
  * Simple Hello World test
@@ -16,6 +16,6 @@ exports = module.exports = functions
             response.status(200).send({ test: 'Testing functions' });
 
             // Terminate the function
-            response.end();
+            return response.end();
         })
     });

@@ -34,7 +34,7 @@ exports = module.exports = functions
                 response.status(200).send({ message: 'Authorized!' });
 
                 // Termininate the function
-                response.end();
+                return response.end();
             } catch (err) {
                 functions.logger.error(err, { structuredData: true });
                 return helpers.error(response, 400, err.message);
