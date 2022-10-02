@@ -14,11 +14,6 @@ An API that allows data scientists to effortlessly send trading signals to the d
 - Run `firebase functions:secrets:set PROVIDER` to set the RPC provider and API key. e.g. https://polygon-mainnet.infura.io/v3/your-code-here
 - Run `firebase functions:secrets:set POOL_ADDRESS` to set the pool address that you wish to manage using the provided mnemonic.
 
-### 3. Deal with a lame but in the Uniswap NPM library (as of 10/2/2022)
-- CD into `./functions/node_modules/@uniswap/v3-periphery`
-- Run `npm i`
-- Run `npx hardhat compile`
-
 ## Notes on functions
 ### Overview
 - Functions are in the `./functions` folder
