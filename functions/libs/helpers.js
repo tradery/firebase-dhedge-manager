@@ -1,7 +1,5 @@
 const functions = require('firebase-functions');
 const util = require('util');
-const _this = this;
-
 
 /**
  * Return Clean Error Response

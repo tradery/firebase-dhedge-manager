@@ -42,7 +42,7 @@ exports = module.exports = functions
                 // } = request.body;
                 
                 // await dhedge.addMember(memberAddress);
-                const poolInfo = await dhedge.getComposition();
+                const poolInfo = await dhedge.trade();
                 helpers.log(poolInfo);
 
                 // Respond
