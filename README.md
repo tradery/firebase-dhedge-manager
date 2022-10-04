@@ -15,6 +15,15 @@ An API that allows data scientists to effortlessly send trading signals to the d
 - Run `firebase functions:secrets:set POOL_ADDRESS` to set the pool address that you wish to manage using the provided mnemonic.
 - Run `firebase functions:secrets:set COIN_MARKET_CAP_API_KEY` to set your CoinMarketCap API key. This enables price lookups.
 
+### 4. Deploy the Functions to Production
+- Run `firebase deploy` from the root directory of this project.
+
+### 5. Approve Spending
+- Hit the `publicApproveSpendingOnRequest` route once for your pool each time you change the approve pool assets.
+
+### 6. Send Signals
+- Send your signals to your endpoint.
+
 ## Notes on functions
 ### Overview
 - Functions are in the `./functions` folder
@@ -25,9 +34,6 @@ An API that allows data scientists to effortlessly send trading signals to the d
 - Emulate Firebase Functions locally by running `firebase emulators:start` from the `functions` directory of this project.
 - Sometimes emulators don't close their ports properly. Try this on Mac (of course updating it to match the port that was mistakenly left open) `lsof -t -i tcp:5002 | xargs kill`
 
-### Deployment instructions
-- Run `firebase deploy` from the root directory of this project.
-
 ### Helpful links
 - [Video on Firebase emulators](https://www.youtube.com/watch?v=pkgvFNPdiEs)
 - [Google Developers API Console](https://console.developers.google.com/apis/dashboard)
@@ -36,5 +42,6 @@ An API that allows data scientists to effortlessly send trading signals to the d
 ### Known Limitations
 - There is no logging of inbound signals; they are simply read and processed.
 - This application is simple by design; it only works for managing a single pool on dHedge.
-- The dHedge v2 SDK does not yet support whitelisting addresses on private funds
-- The CoinMarketCap API calls do not yet have a defensive [retry strategy](https://github.com/tim-kos/node-retry)
+- The dHedge v2 SDK does not yet support whitelisting addresses on private funds.
+- The CoinMarketCap API calls do not yet have a defensive [retry strategy](https://github.com/tim-kos/node-retry).
+- THe network and contract addresses are locked to Polygon.
