@@ -2,6 +2,7 @@ const functions = require('firebase-functions');
 const cors = require('cors')({ origin: true });
 const helpers = require('../../libs/helpers');
 const dhedge = require('../../libs/dhedge');
+const coinmarketcap = require('../../libs/coinmarketcap');
 
 /**
  * Authenticated Hello World test
@@ -15,7 +16,8 @@ exports = module.exports = functions
             "API_KEY", 
             "MNEMONIC", 
             "PROVIDER",
-            "POOL_ADDRESS"
+            "POOL_ADDRESS",
+            "COIN_MARKET_CAP_API_KEY"
         ],
     })
     .https
@@ -42,8 +44,12 @@ exports = module.exports = functions
                 // } = request.body;
                 
                 // await dhedge.addMember(memberAddress);
-                const poolInfo = await dhedge.trade();
-                helpers.log(poolInfo);
+                // const poolInfo = await dhedge.aaveLeveragedLong();
+                // helpers.log(poolInfo);
+                
+                helpers.log('BTC: ' + await coinmarketcap.btcPrice());
+                helpers.log('ETH: ' + await coinmarketcap.ethPrice());
+                helpers.log('MATIC: ' + await coinmarketcap.maticPrice());
 
                 // Respond
                 response.status(200).send({ message: 'Success'});

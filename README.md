@@ -13,6 +13,7 @@ An API that allows data scientists to effortlessly send trading signals to the d
 - Run `firebase functions:secrets:set MNEMONIC` to set the recovery phrase for your dhedge manager wallet.
 - Run `firebase functions:secrets:set PROVIDER` to set the RPC provider and API key. e.g. https://polygon-mainnet.infura.io/v3/your-code-here
 - Run `firebase functions:secrets:set POOL_ADDRESS` to set the pool address that you wish to manage using the provided mnemonic.
+- Run `firebase functions:secrets:set COIN_MARKET_CAP_API_KEY` to set your CoinMarketCap API key. This enables price lookups.
 
 ## Notes on functions
 ### Overview
@@ -36,3 +37,4 @@ An API that allows data scientists to effortlessly send trading signals to the d
 - There is no logging of inbound signals; they are simply read and processed.
 - This application is simple by design; it only works for managing a single pool on dHedge.
 - The dHedge v2 SDK does not yet support whitelisting addresses on private funds
+- The CoinMarketCap API calls do not yet have a defensive [retry strategy](https://github.com/tim-kos/node-retry)

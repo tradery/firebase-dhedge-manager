@@ -18,7 +18,11 @@
     "firebase",
     "dhedge-sdk",
     "ERC20",
-    "polygon"
+    "polygon",
+    "quant",
+    "crypto",
+    "leverage",
+    "aave"
   ],
   "author": "Aslan Goldenhour",
   "license": "GPL-3.0-or-later",
