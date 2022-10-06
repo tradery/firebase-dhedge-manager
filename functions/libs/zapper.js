@@ -1,4 +1,5 @@
 const fetch = require('node-fetch');
+const { ethers } = require("@dhedge/v2-sdk");
 const basepath = 'https://api.zapper.fi/v2/';
 
 /**
@@ -49,6 +50,7 @@ const basepath = 'https://api.zapper.fi/v2/';
  */
 exports.cleanAaveBalances = (assets) => {
     let response = {};
+    let supplyBalance, debtBalance, supplyLiquidationThreshold = 0;
     for (const asset of assets) {
         response[asset.groupId] = {
             'symbol': asset.tokens[0].symbol, 
@@ -58,8 +60,16 @@ exports.cleanAaveBalances = (assets) => {
             'balance': asset.tokens[0].balance,
             'balanceRaw': asset.tokens[0].balanceRaw,
             'balanceUSD': asset.tokens[0].balanceUSD,
+            'balanceBN': ethers.BigNumber.from(asset.tokens[0].balanceRaw),
             'liquidationThreshold': asset.dataProps.liquidationThreshold,
         }
+        if (asset.groupId === 'supply') {
+            supplyLiquidationThreshold = asset.dataProps.liquidationThreshold;
+            supplyBalance = asset.tokens[0].balanceUSD;
+        } else if (asset.groupId === 'variable-debt') {
+            debtBalance = asset.tokens[0].balanceUSD;
+        }
     }
+    response['liquidationHealth'] = supplyLiquidationThreshold / (debtBalance / supplyBalance);
     return response;
 }
