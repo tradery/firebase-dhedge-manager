@@ -30,6 +30,36 @@ const basepath = 'https://api.zapper.fi/v2/';
         throw new Error(JSON.stringify(await response.json()));
     }
     const responseJson = await response.json();
-    return (responseJson.balances[address].products.length !== 0) ?
-        responseJson.balances[address].products[0].assets : [];
+    if (responseJson.balances[address].products.length === 0) {
+        return [];
+    }
+
+    // No errors
+    const assets = responseJson.balances[address].products[0].assets;
+    return assets;
+}
+
+/**
+ * Get Clean AAVE Balances
+ * 
+ * @TODO Support more than one token for 'supply' and 'variable-debt'
+ * 
+ * @param {Array} assets List of AAVE assets from aaveBalances()
+ * @returns {Object} A clean list of relevant data
+ */
+exports.cleanAaveBalances = (assets) => {
+    let response = {};
+    for (const asset of assets) {
+        response[asset.groupId] = {
+            'symbol': asset.tokens[0].symbol, 
+            'address': asset.tokens[0].address,
+            'decimals': asset.tokens[0].decimals,
+            'usdPrice': asset.tokens[0].price,
+            'balance': asset.tokens[0].balance,
+            'balanceRaw': asset.tokens[0].balanceRaw,
+            'balanceUSD': asset.tokens[0].balanceUSD,
+            'liquidationThreshold': asset.dataProps.liquidationThreshold,
+        }
+    }
+    return response;
 }
