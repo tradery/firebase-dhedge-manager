@@ -6,6 +6,7 @@ const dhedge = require('../../libs/dhedge');
 const coinmarketcap = require('../../libs/coinmarketcap');
 const { ethers } = require("@dhedge/v2-sdk");
 const delay = require('delay');
+const zapper = require('../../libs/zapper');
 
 /**
  * Authenticated Hello World test
@@ -20,7 +21,8 @@ exports = module.exports = functions
             "MNEMONIC", 
             "PROVIDER",
             "POOL_ADDRESS",
-            "COIN_MARKET_CAP_API_KEY"
+            "COIN_MARKET_CAP_API_KEY",
+            "ZAPPER_API_KEY",
         ],
     })
     .https
@@ -41,7 +43,8 @@ exports = module.exports = functions
                 
                 // Authorized!
 
-                await btcSuperYield.long();
+                // await btcSuperYield.long();
+                helpers.log(await zapper.aaveBalances('0xe86ff28d0cec7411bf7499025fc79a9eda1e9a10'));
 
                 // Get the data from the request
                 // const { 

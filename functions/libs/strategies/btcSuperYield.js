@@ -6,10 +6,6 @@ const helpers = require('../helpers');
 const _this = this;
 const delayAmount = 5000;
 
-// TODO
-// WBTC is 18 digits, not 8!!!
-// Automate unrolling positons
-// Prevent liquidations
 
 
 /**
