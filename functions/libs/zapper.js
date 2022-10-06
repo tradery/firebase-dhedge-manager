@@ -74,3 +74,31 @@ exports.cleanAaveBalances = (assets) => {
     response['liquidationHealth'] = supplyLiquidationThreshold / (debtBalance / supplyBalance);
     return response;
 }
+
+// EXAMPLE RESPONSE
+//
+// {
+//     supply: {
+//       symbol: 'WBTC',
+//       address: '0x1bfd67037b42cf73acf2047067bd4f2c47d9bfd6',
+//       decimals: 8,
+//       usdPrice: 20157,
+//       balance: 0.00096227,
+//       balanceRaw: '96227',
+//       balanceUSD: 19.39647639,
+//       balanceBN: BigNumber { _hex: '0x0177e3', _isBigNumber: true },
+//       liquidationThreshold: 0.75
+//     },
+//     'variable-debt': {
+//       symbol: 'USDC',
+//       address: '0x2791bca1f2de4661ed88a30c99a7a9449aa84174',
+//       decimals: 6,
+//       usdPrice: 1,
+//       balance: 11.204611,
+//       balanceRaw: '11204611',
+//       balanceUSD: 11.204611,
+//       balanceBN: BigNumber { _hex: '0xaaf803', _isBigNumber: true },
+//       liquidationThreshold: 0.85
+//     },
+//     health: 1.2983366662617737
+//   }
