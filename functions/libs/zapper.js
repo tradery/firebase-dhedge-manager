@@ -44,6 +44,7 @@ const basepath = 'https://api.zapper.fi/v2/';
  * Get Clean AAVE Balances
  * 
  * @TODO Support more than one token for 'supply' and 'variable-debt'
+ * @TODO Support more groupIds than just 'supply' and 'variable-debt'
  * 
  * @param {Array} assets List of AAVE assets from aaveBalances()
  * @returns {Object} A clean list of relevant data
