@@ -1,5 +1,6 @@
 const functions = require('firebase-functions');
 const util = require('util');
+const delay = require('delay');
 
 /**
  * Return Clean Error Response
@@ -47,3 +48,7 @@ exports.log = (message) => {
     }
 };
 
+exports.delay = async (time = 5000) => {
+    _this.log('   ...Pausing for ' + time / 1000 + ' seconds...');
+    await delay(time);
+}
