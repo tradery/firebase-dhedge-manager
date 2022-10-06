@@ -50,6 +50,10 @@ const basepath = 'https://api.zapper.fi/v2/';
  * @returns {Object} A clean list of relevant data
  */
 exports.cleanAaveBalances = (assets) => {
+    if (assets.length === 0) {
+        return [];
+    }
+
     let response = {};
     let supplyBalance, debtBalance, supplyLiquidationThreshold = 0;
     for (const asset of assets) {
