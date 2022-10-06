@@ -54,13 +54,26 @@ exports.getBalance = (assets, token) => {
     throw new Error('Could not find the specified asset (' + token + ') in the pool.');
 }
 
-exports.tradeUniswap = async (from, to, amount) => {
+exports.decimalToInteger = (amount, decimals) => {
+    return amount*('1e' + decimals);
+}
+
+exports.getBalanceInfo = (amountBN, decimals) => {
+    const amountDecimal = ethers.utils.formatUnits(amountBN, decimals);
+    return {
+        balanceBN: amountBN,
+        balance: amountDecimal,
+        balanceRaw: _this.decimalToInteger(amountDecimal),
+    }
+}
+
+exports.tradeUniswap = async (from, to, amountOfFromToken) => {
     const pool = await _this.initPool();
     const slippageTolerance = 0.5;
     const tx = await pool.tradeUniswapV3(
         from,
         to,
-        amount,
+        amountOfFromToken,
         500,
         slippageTolerance,
         _this.gasInfo()
@@ -200,27 +213,6 @@ exports.approveAllSpendingOnce = async () => {
 
     return true;
 }
-
-exports.tradeToros = async () => {
-    const pool = await _this.initPool();
-
-    const tx = await pool.approve(
-        Dapp.TOROS,
-        '0x3dbce2c8303609c17aa23b69ebe83c2f5c510ada',
-        ethers.constants.MaxInt256,
-        _this.gasInfo()
-    )
-    console.log(tx);
-
-    return await pool.trade(
-        Dapp.TOROS, 
-        '0x3dbce2c8303609c17aa23b69ebe83c2f5c510ada', // bitcoin bear 2x
-        '0x2791bca1f2de4661ed88a30c99a7a9449aa84174', // usdc
-        ethers.utils.parseEther('1'),
-        0.5,
-        _this.gasInfo()
-    );
-};
 
 exports.aaveLeveragedLong = async () => {
   const pool = await _this.initPool();
