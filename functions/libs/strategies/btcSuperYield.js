@@ -136,7 +136,7 @@ exports.swapUsdcForBtc = async (amount) => {
  * @param {BigNumber} amount Amount of BTC to deposit, as a hex
  * @returns {Object} Transaction details
  */
- exports.lendWbtc = async (amount) => {
+exports.lendWbtc = async (amount) => {
     const tx = await dhedge.lendDeposit(dhedge.tokens.WBTC, amount);
     helpers.log('Depositing ' + _this.btcHexToDecimal(amount) + ' WBTC into AAVE');
 

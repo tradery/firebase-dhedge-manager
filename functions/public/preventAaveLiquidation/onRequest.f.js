@@ -1,12 +1,7 @@
 const functions = require('firebase-functions');
 const cors = require('cors')({ origin: true });
 const helpers = require('../../libs/helpers');
-const btcSuperYield = require('../../libs/strategies/btcSuperYield');
-const dhedge = require('../../libs/dhedge');
-const coinmarketcap = require('../../libs/coinmarketcap');
-const { ethers } = require("@dhedge/v2-sdk");
-const delay = require('delay');
-const zapper = require('../../libs/zapper');
+const aave = require('../../libs/aave');
 
 /**
  * Authenticated Hello World test
@@ -44,9 +39,7 @@ exports = module.exports = functions
                 // Authorized!
 
                 // await btcSuperYield.long();
-                const aaveBalances = await zapper.aaveBalances(process.env.POOL_ADDRESS);
-                helpers.log(aaveBalances);
-                helpers.log(zapper.cleanAaveBalances(aaveBalances));
+                await aave.rebalanceDebt();
 
                 // Respond
                 response.status(200).send({ message: 'Success'});

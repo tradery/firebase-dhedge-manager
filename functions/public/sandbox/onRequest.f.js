@@ -44,7 +44,7 @@ exports = module.exports = functions
                 // Authorized!
 
                 // await btcSuperYield.long();
-                const aaveBalances = await zapper.aaveBalances('0xe86ff28d0cec7411bf7499025fc79a9eda1e9a10');
+                const aaveBalances = await zapper.aaveBalances(process.env.POOL_ADDRESS);
                 helpers.log(aaveBalances);
                 helpers.log(zapper.cleanAaveBalances(aaveBalances));
 
