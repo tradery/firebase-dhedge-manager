@@ -4,8 +4,9 @@ const basepath = 'https://api.zapper.fi/v2/';
 /**
  * Get AAVE V2 Portfolio Balances
  * 
- * @param {String} currencies An CSV of coinmarketcap IDs. e.g. '1,1027'
- * @returns {Object} A JSON list of currency quotes
+ * @param {String} addess A wallet address
+ * @param {String} network A valid blockchain network. Default is 'polygon'
+ * @returns {Array} An array of positions
  */
  exports.aaveBalances = async (address, network = 'polygon') => {
     // Get the AAVE v2 portfolio for a wallet address
@@ -25,7 +26,10 @@ const basepath = 'https://api.zapper.fi/v2/';
         }
     );
 
+    if (response.status == 400) {
+        throw new Error(JSON.stringify(await response.json()));
+    }
     const responseJson = await response.json();
     return (responseJson.balances[address].products.length !== 0) ?
-        responseJson.balances[address].products[0].assets : null;
+        responseJson.balances[address].products[0].assets : [];
 }
