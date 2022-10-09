@@ -1,13 +1,7 @@
 const functions = require('firebase-functions');
 const { firestore } = require('firebase-admin');
-const FieldValue = firestore.FieldValue;
+const fetch = require('node-fetch');
 const helpers = require('../../libs/helpers');
-const btcSuperYield = require('../../libs/strategies/btcSuperYield');
-const dhedge = require('../../libs/dhedge');
-const coinmarketcap = require('../../libs/coinmarketcap');
-const { ethers } = require("@dhedge/v2-sdk");
-const delay = require('delay');
-const zapper = require('../../libs/zapper');
 
 /**
  * Rebalance Portfolio Debt
@@ -20,6 +14,11 @@ const zapper = require('../../libs/zapper');
         // Ensure the function has enough memory and time to process
         timeoutSeconds: 120,
         memory: "1GB",
+        secrets: [
+            "API_KEY", 
+            "LOCAL_BASEPATH",
+            "PRODUCTION_BASEPATH", 
+        ],
     })
     .pubsub
     .schedule('every 5 minutes')
@@ -32,7 +31,27 @@ const zapper = require('../../libs/zapper');
             const portfoliosRef = db.collection('portfolios');
             const snapshot = await portfoliosRef.where('isActive', '==', true).get();
             const portfolios = helpers.snapshotToArray(snapshot);
-            helpers.log(portfolios);
+            
+            // For every active portfolio
+            for (const portfolio of portfolios) {
+
+                // Rebalance the pool and debt in a new thread
+                // We're purposely not calling this with await
+                // because we don't want this script to hang. 
+                fetch(helpers.getBasepath()
+                    + 'publicRebalanceOnRequest',
+                    {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'Accept-Encoding': 'deflate, gzip',
+                            'authorization': process.env.API_KEY
+                        },
+                        body: JSON.stringify({ 'portfolioId': portfolio.id })
+                    }
+                );
+            }
 
             return null;
         } catch (err) {
