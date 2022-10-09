@@ -82,3 +82,14 @@ exports.maticPrice = async () => {
     const data = await _this.quotes(id);
     return data[id]['quote']['USD']['price'];
 }
+
+/**
+ * Get token price
+ * 
+ * @parap   {Integer} The CoinMarketCap token ID
+ * @returns {Float} Just the token price
+ */
+ exports.getUsdPrice = async (id) => {
+    const data = await _this.quotes(id);
+    return data[id]['quote']['USD']['price'];
+}
