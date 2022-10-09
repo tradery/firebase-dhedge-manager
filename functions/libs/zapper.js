@@ -55,8 +55,7 @@ exports.cleanAaveBalances = (assets) => {
     }
 
     /**
-     * @TODO
-     * support multiple tokens in supply or variable-debt
+     * @TODO support multiple tokens in supply or variable-debt
      */
     let response = {};
     let supplyBalance, debtBalance, supplyLiquidationThreshold = 0;
