@@ -1,12 +1,15 @@
+const { ethers } = require("@dhedge/v2-sdk");
 const zapper = require('./zapper');
 const helpers = require('./helpers');
 const dhedge = require('./dhedge');
 const _this = this;
 
-exports.targetLiquidationHealth = 1.5;
+exports.liquidationHealthTarget = 1.5;
 
 exports.rebalanceDebt = async () => {
-    const aaveBalances = zapper.cleanAaveBalances(await zapper.aaveBalances(process.env.POOL_ADDRESS));
+    const zapperResponse = await zapper.aaveBalances(process.env.POOL_ADDRESS);
+    // helpers.log(zapperResponse);
+    const aaveBalances = zapper.cleanAaveBalances(zapperResponse);
     helpers.log(aaveBalances);
     
     // Unwind some debt
@@ -21,9 +24,9 @@ exports.emptyDebt = async () => {
     return await _this.reduceDebt(aaveBalances);
 }
 
-exports.getTargetWithdrawAmount = (supply, debt, liquidationThreshold, targetLiquidationHealth) => {
+exports.getTargetWithdrawAmount = (supply, debt, liquidationThreshold, liquidationHealthTarget) => {
     const debtratio = debt / supply;
-    const targetLiquidationThreshold = liquidationThreshold / targetLiquidationHealth;
+    const targetLiquidationThreshold = liquidationThreshold / liquidationHealthTarget;
     const offsetRatio = (debtratio / targetLiquidationThreshold) - 1;
     const offset = supply * offsetRatio;
     return offset;
@@ -73,14 +76,29 @@ exports.reduceDebt = async (cleanBalances, liquidationHealthTarget = null) => {
         
         // Try to repay as much debt as possible per loop        
         let debtToRepayThisLoopUsd = (remainingDebtToRepay > maxSafeSupplyToWithdraw) ? 
-            remainingDebtToRepay :
-            maxSafeSupplyToWithdraw;
+            maxSafeSupplyToWithdraw :
+            remainingDebtToRepay;
 
         // Calculate the repayment values as an integers so ethers can understand the values
         const debtToRepayDecimal = debtToRepayThisLoopUsd / cleanBalances['supply'].usdPrice;
         const debtToRepayInteger = dhedge.decimalToInteger(debtToRepayDecimal, cleanBalances['supply'].decimals);
         const estimatedSwapDecimal = .99 * (debtToRepayThisLoopUsd / cleanBalances['variable-debt'].usdPrice);
         const estimatedSwapInteger = dhedge.decimalToInteger(estimatedSwapDecimal, cleanBalances['variable-debt'].decimals);
+
+
+        /**
+         * @TODO Check to see if we have any balance in our wallet
+         * getComposition()
+         * 
+         * pay off as much balance as we can with debt token
+         * 
+         * @TODO
+         * support multiple tokens in supply or variable-debt
+         * 
+         * @TODO
+         * handle negative numbers if liquidation health is below 1
+         */
+
 
         // Withdraw supply tokens
         helpers.log(
@@ -110,18 +128,18 @@ exports.reduceDebt = async (cleanBalances, liquidationHealthTarget = null) => {
         );
         await helpers.delay();
         
-        // Deposit debt tokens as new supply
-        helpers.log(
-            'Depositing approximately ' + estimatedSwapDecimal + ' '
-            + cleanBalances['variable-debt'].symbol + ' '
-            + '($' + (.99 * debtToRepayThisLoopUsd) + ') '
-            + 'into AAVE'
-        );
-        await dhedge.lendDeposit(
-            debtTokenAddress,
-            estimatedSwapInteger
-        );
-        await helpers.delay();
+        // // Deposit debt tokens as new supply
+        // helpers.log(
+        //     'Depositing approximately ' + estimatedSwapDecimal + ' '
+        //     + cleanBalances['variable-debt'].symbol + ' '
+        //     + '($' + (.99 * debtToRepayThisLoopUsd) + ') '
+        //     + 'into AAVE'
+        // );
+        // await dhedge.lendDeposit(
+        //     debtTokenAddress,
+        //     estimatedSwapInteger
+        // );
+        // await helpers.delay(10000);
 
         // Repay debt
         helpers.log(
@@ -150,6 +168,10 @@ exports.reduceDebt = async (cleanBalances, liquidationHealthTarget = null) => {
             'currentHealth': currentHealth,
         });
     } while (remainingDebtToRepay > 0);
+
+    /**
+     * @TODO withdraw remaining supply from AAVE
+     */
     
     return true;
 }
