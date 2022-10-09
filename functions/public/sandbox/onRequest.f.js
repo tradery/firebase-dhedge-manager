@@ -44,9 +44,9 @@ exports = module.exports = functions
                 // Authorized!
 
                 // await btcSuperYield.long();
-                const aaveBalances = await zapper.aaveBalances(process.env.POOL_ADDRESS);
-                helpers.log(aaveBalances);
-                helpers.log(zapper.cleanAaveBalances(aaveBalances));
+                // const aaveBalances = await zapper.aaveBalances(process.env.POOL_ADDRESS);
+                // helpers.log(aaveBalances);
+                // helpers.log(zapper.cleanAaveBalances(aaveBalances));
 
                 // Get the data from the request
                 // const { 
@@ -54,8 +54,8 @@ exports = module.exports = functions
                 // } = request.body;
                 // await dhedge.addMember(memberAddress);
                 
-                // const poolInfo = await dhedge.getComposition();
-                // helpers.log(poolInfo);
+                const poolInfo = await dhedge.getComposition();
+                helpers.log(poolInfo);
 
                 
                 // console.log(dhedge.getBalance(poolInfo, dhedge.tokens.AAVEV3));
