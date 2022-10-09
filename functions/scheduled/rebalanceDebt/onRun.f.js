@@ -29,19 +29,10 @@ const zapper = require('../../libs/zapper');
             const db = firestore();
 
             // Define db constants
-            const tweetsRef = db.collection('tweets');
-            
-            // Get our tweets index doc
-            const tweetsIndexRef = tweetsRef.doc('index');
-            const tweetsIndexDoc = await tweetsIndexRef.get();
-            let tweetGuids = [];
-
-            // Is this the first run?
-            if (tweetsIndexDoc.exists) {
-
-            }
-
-            console.log(db);
+            const portfoliosRef = db.collection('portfolios');
+            const snapshot = await portfoliosRef.where('isActive', '==', true).get();
+            const portfolios = helpers.snapshotToArray(snapshot);
+            helpers.log(portfolios);
 
             return null;
         } catch (err) {
