@@ -1,6 +1,7 @@
 const functions = require('firebase-functions');
 const util = require('util');
 const delay = require('delay');
+const _this = this;
 
 /**
  * Return Clean Error Response
@@ -48,7 +49,26 @@ exports.log = (message) => {
     }
 };
 
-exports.delay = async (time = 5000) => {
+exports.delay = async (time = 2000) => {
     _this.log('   ...Pausing for ' + time / 1000 + ' seconds...');
     await delay(time);
+}
+
+// Gets a snapshot from Firestore as an Array
+exports.snapshotToArray = (snapshot) => {
+    try {
+        let returnArr = [];
+        if (!snapshot.empty) {
+            snapshot.forEach(doc => {
+                returnArr.push({
+                    id: doc.id,
+                    data: doc.data()
+                });
+            });
+        }
+        return returnArr;
+    } catch (error) {
+        functions.logger.error(error);
+        return null;
+    }
 }

@@ -25,22 +25,30 @@ An API that allows data scientists to effortlessly send trading signals to the d
 ### 6. Send Signals
 - Send your signals to your endpoint.
 
-## Notes on functions
+## Notes on Functions
 ### Overview
 - Functions are in the `./functions` folder
 - Each function is nested into `./functions/{callType}/{descriptiveName}/onRequest.f.js`
 
-### Local development
+### Local Development
 - Run `npm install` from `./functions`
 - Emulate Firebase Functions locally by running `firebase emulators:start` from the `functions` directory of this project.
+- Test scheduled functions with `firebase functions:shell`. Call the function by name from within the shell. [Learn more](https://stackoverflow.com/a/69424195/17273215)
 - Sometimes emulators don't close their ports properly. Try this on Mac (of course updating it to match the port that was mistakenly left open) `lsof -t -i tcp:5002 | xargs kill`
 
-### Helpful links
+## Notes on Firestore
+### Local Development
+- To export local data from your local instance of Firestore `firebase emulators:export ./firebaseData`
+- To import local data into Firestore for testing `firebase emulators:start --import=./firebaseData`
+- To export local firestore data every time `firebase emulators:start --import=./firebaseData --export-on-exit`
+
+
+## Helpful Links
 - [Video on Firebase emulators](https://www.youtube.com/watch?v=pkgvFNPdiEs)
 - [Google Developers API Console](https://console.developers.google.com/apis/dashboard)
 - [dHedge SDK v2](https://github.com/dhedge/dhedge-v2-sdk)
 
-### Known Limitations
+## Known Limitations
 - There is no logging of inbound signals; they are simply read and processed.
 - This application is simple by design; it only works for managing a single pool on dHedge.
 - The dHedge v2 SDK does not yet support whitelisting addresses on private funds.
