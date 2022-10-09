@@ -25,7 +25,7 @@ exports.usdcToBtc = async (amount) => {
 
     // Divide the USDC amount by the current price of Bitcoin
     const usdcDecimal = _this.usdcHexToDecimal(amount);
-    const btcDecimal = (usdcDecimal / btcPrice) * .99;
+    const btcDecimal = (usdcDecimal / btcPrice) * 0.99;
 
     // Do hacky string conversion to get the number to the right length
     const parts = btcDecimal.toString().split('.');
@@ -55,7 +55,7 @@ exports.usdcToBtc = async (amount) => {
 
     // Multiply the BTC price by the amount of Bitcoin
     const btcDecimal = _this.btcHexToDecimal(amount);
-    const usdcDecimal = btcDecimal * btcPrice * .99
+    const usdcDecimal = btcDecimal * btcPrice * 0.99
 
     // Do hacky string conversion to get the number to the right length
     const parts = usdcDecimal.toString().split('.');
@@ -240,7 +240,7 @@ exports.neutral = async () => {
 
     for (const asset of assets) {
         if (asset.asset !== dhedge.tokens.USDC) {
-            if (asset.balance.isZero() == false) {
+            if (asset.balance.isZero() === false) {
                 // replace with dhedge.trade()
                 const tx = await pool.tradeUniswapV3(
                     asset.asset,

@@ -82,7 +82,7 @@ exports.reduceDebt = async (cleanBalances, liquidationHealthTarget = null) => {
         // Calculate the repayment values as an integers so ethers can understand the values
         const debtToRepayDecimal = debtToRepayThisLoopUsd / cleanBalances['supply'].usdPrice;
         const debtToRepayInteger = dhedge.decimalToInteger(debtToRepayDecimal, cleanBalances['supply'].decimals);
-        const estimatedSwapDecimal = .99 * (debtToRepayThisLoopUsd / cleanBalances['variable-debt'].usdPrice);
+        const estimatedSwapDecimal = 0.99 * (debtToRepayThisLoopUsd / cleanBalances['variable-debt'].usdPrice);
         const estimatedSwapInteger = dhedge.decimalToInteger(estimatedSwapDecimal, cleanBalances['variable-debt'].decimals);
 
 
@@ -145,7 +145,7 @@ exports.reduceDebt = async (cleanBalances, liquidationHealthTarget = null) => {
         helpers.log(
             'Repaying approximately ' + estimatedSwapDecimal + ' '
             + cleanBalances['variable-debt'].symbol + ' '
-            + '($' + (.99 * debtToRepayThisLoopUsd) + ') '
+            + '($' + (0.99 * debtToRepayThisLoopUsd) + ') '
             + 'on AAVE'
         );
         await dhedge.repayDebt(

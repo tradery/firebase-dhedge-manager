@@ -44,7 +44,7 @@ exports = module.exports = functions
                 } = request.body;
 
                 // Return an error if needed
-                if (portfolioId == undefined || portfolioId == '')
+                if (portfolioId === undefined || portfolioId === '')
                     throw new Error("A `portfolioId` must be set.");
 
                 // Initialize Firebase components
@@ -57,11 +57,11 @@ exports = module.exports = functions
                 const signalsRef = portfolioRef.collection('signals');
                 
                 // Make sure we have a valid portfolio
-                if (portfolioDoc.data() == undefined)
+                if (portfolioDoc.data() === undefined)
                     throw new Error("Unknown `portfolioId`");
 
                 // And that it's active
-                if (portfolioDoc.data().isActive == false)
+                if (portfolioDoc.data().isActive === false)
                     throw new Error("Portfolio " + portfolioId + " is not active.");
 
                 // Yay! We're authorized!
@@ -69,10 +69,10 @@ exports = module.exports = functions
                     
                 
                 // Did we receive a new signal?
-                if (longToken == undefined
-                    || longToken == ''
-                    || shortToken == undefined
-                    || shortToken == '') {
+                if (longToken === undefined
+                    || longToken === ''
+                    || shortToken === undefined
+                    || shortToken === '') {
 
                     // Get the last signal sent to this portfolio
                     const signalsSnapshot = await signalsRef.orderBy('createdAt', 'desc').limit(1).get();
@@ -84,14 +84,14 @@ exports = module.exports = functions
                     // Default stablecoin or stable fiat signals to USDC
                     longToken  = longToken.toUpperCase();
                     shortToken = shortToken.toUpperCase();
-                    if (longToken == 'USD' 
-                        || longToken == 'DAI' 
-                        || longToken == 'USDT') {
+                    if (longToken === 'USD' 
+                        || longToken === 'DAI' 
+                        || longToken === 'USDT') {
                             longToken = 'USDC';
                         }
-                    if (shortToken == 'USD' 
-                        || shortToken == 'DAI' 
-                        || shortToken == 'USDT') {
+                    if (shortToken === 'USD' 
+                        || shortToken === 'DAI' 
+                        || shortToken === 'USDT') {
                             shortToken = 'USDC';
                         }
 
@@ -112,7 +112,7 @@ exports = module.exports = functions
                 // Check AAVE balances with zapper
 
                 // Check our last signal to see what we are long/short
-                if (longToken === 'USDC' && shortToken == 'USDC') {
+                if (longToken === 'USDC' && shortToken === 'USDC') {
                     // WHILE ANY DEBT EXISTS
                         // Calculate max supply to withdrawl
                         // Withdrawl max supply

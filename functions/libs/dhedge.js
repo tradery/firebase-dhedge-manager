@@ -38,18 +38,19 @@ exports.tokens = {
 exports.addressToSymbol = (address) => {
     const tokens = _this.tokens;
     for (const token in tokens) {
-        if (tokens[token].address.toLowerCase() == address.toLowerCase()) {
+        if (tokens[token].address.toLowerCase() === address.toLowerCase()) {
             return token;
         }
     }
+    return null;
 }
 
 exports.addressToTokenDetails = (address) => {
     const tokens = _this.tokens;
     for (const token in tokens) {
-        if (tokens[token].address.toLowerCase() == address.toLowerCase()) {
+        if (tokens[token].address.toLowerCase() === address.toLowerCase()) {
             // get usd price from coin market cap
-            
+
             // transform into object
             return {
                 symbol: token,
@@ -59,6 +60,7 @@ exports.addressToTokenDetails = (address) => {
             };
         }
     }
+    return null;
 }
 
 exports.initPool = async () => {
@@ -94,7 +96,7 @@ exports.getComposition = async () => {
  */
 exports.getBalance = (assets, token) => {
     for (const asset of assets) {
-        if (asset.asset.toLowerCase() == token.toLowerCase()) {
+        if (asset.asset.toLowerCase() === token.toLowerCase()) {
             return ethers.BigNumber.from(asset.balance);
         }
     }

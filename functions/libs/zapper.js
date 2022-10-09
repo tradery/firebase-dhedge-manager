@@ -27,7 +27,7 @@ const basepath = 'https://api.zapper.fi/v2/';
         }
     );
 
-    if (response.status == 400) {
+    if (response.status === 400) {
         throw new Error(JSON.stringify(await response.json()));
     }
     const responseJson = await response.json();
