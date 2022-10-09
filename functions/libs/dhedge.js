@@ -1,17 +1,65 @@
 const { Dhedge, Dapp, Network, ethers } = require("@dhedge/v2-sdk");
-const helpers = require('../libs/helpers');
+const helpers = require('./helpers');
+const coinmarketcap = require('./coinmarketcap');
 const _this = this;
 
+/**
+ * @LIMITATION Locked to Polygon network
+ */
 exports.tokens = {
-    USDC:       '0x2791bca1f2de4661ed88a30c99a7a9449aa84174',
-    DAI:        '0x8f3cf7ad23cd3cadbd9735aff958023239c6a063',
-    USDT:       '0xc2132d05d31c914a87c6611c10748aeb04b58e8f',
-    WBTC:       '0x1bfd67037b42cf73acf2047067bd4f2c47d9bfd6',
-    AAVEV2:     '0x8dff5e27ea6b7ac08ebfdf9eb090f32ee9a30fcf',
-    AAVEV3:     '0x794a61358D6845594F94dc1DB02A252b5b4814aD',
-    BTCBEAR2X:  '0x3dbce2c8303609c17aa23b69ebe83c2f5c510ada',
-    BTCBULL3X:  '0xdb88ab5b485b38edbeef866314f9e49d095bce39',
+    USDC: {
+        address:  '0x2791bca1f2de4661ed88a30c99a7a9449aa84174',
+        decimals: 6,
+        coinMarketCapId: 3408,
+    },
+    WBTC: {
+        address:  '0x1bfd67037b42cf73acf2047067bd4f2c47d9bfd6',
+        decimals: 8,
+        coinMarketCapId: 1,
+
+    },
+    WETH: {
+        address:  '0x7ceb23fd6bc0add59e62ac25578270cff1b9f619',
+        decimals: 18,
+        coinMarketCapId: 1027,
+    },
+    MATIC: {
+        address:  '0x0000000000000000000000000000000000001010',
+        decimals: 18,
+        coinMarketCapId: 3890,
+    },
+    AAVEV2: {
+        address:  '0x8dff5e27ea6b7ac08ebfdf9eb090f32ee9a30fcf',
+        decimals: null,
+        coinMarketCapId: null,
+    },
 };
+
+exports.addressToSymbol = (address) => {
+    const tokens = _this.tokens;
+    for (const token in tokens) {
+        if (tokens[token].address.toLowerCase() == address.toLowerCase()) {
+            return token;
+        }
+    }
+}
+
+exports.addressToTokenDetails = (address) => {
+    const tokens = _this.tokens;
+    for (const token in tokens) {
+        if (tokens[token].address.toLowerCase() == address.toLowerCase()) {
+            // get usd price from coin market cap
+            
+            // transform into object
+            return {
+                symbol: token,
+                address: address,
+                decimals: tokens[token].decimals,
+                usdPrice: '',
+            };
+        }
+    }
+}
 
 exports.initPool = async () => {
     // Initialize our wallet
@@ -54,17 +102,18 @@ exports.getBalance = (assets, token) => {
     throw new Error('Could not find the specified asset (' + token + ') in the pool.');
 }
 
-exports.decimalToInteger = (amount, decimals) => {
-    return amount*('1e' + decimals);
-}
-
 exports.getBalanceInfo = (amountBN, decimals) => {
     const amountDecimal = ethers.utils.formatUnits(amountBN, decimals);
+
     return {
-        balanceBN: amountBN,
-        balance: amountDecimal,
-        balanceRaw: _this.decimalToInteger(amountDecimal),
+        bigNumber: amountBN,
+        decimal: amountDecimal,
+        integer: _this.decimalToInteger(amountDecimal),
     }
+}
+
+exports.decimalToInteger = (amount, decimals) => {
+    return Math.round(amount*('1e' + decimals));
 }
 
 exports.tradeUniswap = async (from, to, amountOfFromToken) => {
@@ -156,7 +205,6 @@ exports.repayDebt = async (token, amount) => {
     return tx;
 }
 
-
 /**
  * Approve All Spending Once
  * 
@@ -213,49 +261,3 @@ exports.approveAllSpendingOnce = async () => {
 
     return true;
 }
-
-exports.aaveLeveragedLong = async () => {
-  const pool = await _this.initPool();
-
-  // Approve USDC Spending
-  // const tx = await pool.approve(
-  //     Dapp.AAVE,
-  //     TOKENS.WBTC,
-  //     ethers.constants.MaxInt256,
-  //     _this.gasInfo()
-  // )
-  // console.log(tx);
-
-// Deposit 1 USDC into Aave lending pool
-// const tx = await pool.lend(Dapp.AAVE, USDC_TOKEN_ADDRESS, "1000000")
-
-// Withdraw 1 USDC from Aave lending pool
-// const tx = await pool.withdrawDeposit(Dapp.AAVE, USDC_TOKEN_ADDRESS, "1000000")
-
-// Borrow 0.0001 WETH from Aave lending pool
-// const tx = await pool.borrow(Dapp.AAVE, WETH_TOKEN_ADDRESS, "100000000000000");
-
-// Repay 0.0001 WETH to Aave lending pool
-// const tx = await pool.repay(Dapp.AAVE, WETH_TOKEN_ADDRESS, "100000000000000");
-
-  // Deposit USDC into AAVE
-  // const tx2 = await pool.lend(
-  //     Dapp.AAVE, 
-  //     TOKENS.USDC, 
-  //     "1000000",
-  //     0,
-  //     _this.gasInfo()
-  // );
-  // console.log(tx2);
-
-  // Borrow WBTC from AAVE
-  const tx3 = await pool.borrow(
-      Dapp.AAVE, 
-      TOKENS.WBTC, 
-      "2500",
-      0,
-      _this.gasInfo()
-  );
-
-  return tx3;
-};
