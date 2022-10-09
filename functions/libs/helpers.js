@@ -36,8 +36,8 @@ exports.stopWatch = (hrtimeStop) => {
  */
  exports.getBasepath = () => {
     return (process.env.FUNCTIONS_EMULATOR) ?
-        functions.config().basepath.local :
-        functions.config().basepath.production;
+        process.env.LOCAL_BASEPATH :
+        process.env.PRODUCTION_BASEPATH;
 }
 
 // Clean logging

@@ -11,10 +11,13 @@ An API that allows data scientists to effortlessly send trading signals to the d
 - CD into `./functions`
 - Run `firebase functions:secrets:set API_KEY` to set the authorization header value needed to access the functions.
 - Run `firebase functions:secrets:set MNEMONIC` to set the recovery phrase for your dhedge manager wallet.
-- Run `firebase functions:secrets:set PROVIDER` to set the RPC provider and API key. e.g. https://polygon-mainnet.infura.io/v3/your-code-here
 - Run `firebase functions:secrets:set POOL_ADDRESS` to set the pool address that you wish to manage using the provided mnemonic.
+- Run `firebase functions:secrets:set PROVIDER` to set the RPC provider and API key. e.g. https://polygon-mainnet.infura.io/v3/your-code-here
 - Run `firebase functions:secrets:set COIN_MARKET_CAP_API_KEY` to set your CoinMarketCap API key. This enables price lookups.
 - Run `firebase functions:secrets:set ZAPPER_API_KEY` to set your Zapper API key. This enables AAVE portfolio lookups.
+- Run `firebase functions:secrets:set LOCAL_BASEPATH` to set your local basepath for functions. This enables testing our pub/sub functions. e.g. `http://localhost:5002/[project-name]/us-central1/`
+- Run `firebase functions:secrets:set PRODUCTION_BASEPATH` to set your basepath for functions. This enables our pub/sub functions. e.g. `https://us-central1-[project-name].cloudfunctions.net/`
+
 
 ### 4. Deploy the Functions to Production
 - Run `firebase deploy` from the root directory of this project.
