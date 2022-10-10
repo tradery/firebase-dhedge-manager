@@ -3,6 +3,7 @@ const { firestore } = require('firebase-admin');
 const FieldValue = firestore.FieldValue;
 const cors = require('cors')({ origin: true });
 const helpers = require('../../libs/helpers');
+const zapper = require('../../libs/zapper');
 
 /**
  * Rebalance portfolio tokens and debt
@@ -24,6 +25,16 @@ exports = module.exports = functions
     .onRequest(async (request, response) => {
         cors(request, response, async () => {
             try {
+                // Make sure our ENVs are set
+                if (process.env.API_KEY === undefined || process.env.API_KEY === '')
+                    throw new Error("API_KEY is not defined on the server.");
+                if (process.env.PROVIDER === undefined || process.env.PROVIDER === '')
+                    throw new Error("PROVIDER is not defined on the server.");
+                if (process.env.COIN_MARKET_CAP_API_KEY === undefined || process.env.COIN_MARKET_CAP_API_KEY === '')
+                    throw new Error("COIN_MARKET_CAP_API_KEY is not defined on the server.");
+                if (process.env.ZAPPER_API_KEY === undefined || process.env.ZAPPER_API_KEY === '')
+                    throw new Error("ZAPPER_API_KEY is not defined on the server.");
+
                 // Force POST
                 if (request.method !== "POST") return helpers.error(response, 400, 
                     "Request method must be POST.");
@@ -37,11 +48,7 @@ exports = module.exports = functions
                     "Unauthorized. The API key provided is invalid.");
 
                 // Get the data from the request
-                let { 
-                    secret,
-                    longToken,
-                    shortToken,
-                } = request.body;
+                const { secret } = request.body;
 
                 // Return an error if needed
                 if (secret === undefined || secret === '')
@@ -71,16 +78,20 @@ exports = module.exports = functions
                 const signalsSnapshot = await signalsRef.orderBy('createdAt', 'desc').limit(1).get();
                 const lastSignal = helpers.snapshotToArray(signalsSnapshot)[0].data;
                 longToken = lastSignal.long;
-                shortToken = lastSignal.short;                    
-                
+                shortToken = lastSignal.short;
                 
                 helpers.log(longToken);
                 helpers.log(shortToken);
                 helpers.log(poolContract);
 
                 // Check wallet balances with dhedge
-
+                
+                
                 // Check AAVE balances with zapper
+                const aaveBalances = zapper.cleanAaveBalances(
+                    await zapper.aaveBalances(poolContract)
+                );
+                helpers.log(aaveBalances);
 
                 // Check our last signal to see what we are long/short
                 if (longToken === 'USDC' && shortToken === 'USDC') {
