@@ -24,6 +24,12 @@ const helpers = require('../../libs/helpers');
     .schedule('every 15 minutes')
     .onRun(async (context) => {
         try {
+            // Make sure our ENVs are set
+            if (helpers.getBasepath() === undefined || helpers.getBasepath() === '')
+                throw new Error("LOCAL_BASEPATH &/OR PRODUCTION_BASEPATH is not defined on the server.");
+            if (process.env.API_KEY === undefined || process.env.API_KEY === '')
+                throw new Error("API_KEY is not defined on the server.");
+
             // Initialize Firebase components
             const db = firestore();
 
@@ -32,9 +38,6 @@ const helpers = require('../../libs/helpers');
             const snapshot = await portfoliosRef.where('isActive', '==', true).get();
             const portfolios = helpers.snapshotToArray(snapshot);
             
-            if (helpers.getBasepath() === undefined || helpers.getBasepath() === '')
-                throw new Error("LOCAL_BASEPATH &/OR PRODUCTION_BASEPATH is not defined.");
-
             // For every active portfolio
             for (const portfolio of portfolios) {
 
