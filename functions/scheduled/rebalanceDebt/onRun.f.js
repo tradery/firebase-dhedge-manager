@@ -32,6 +32,9 @@ const helpers = require('../../libs/helpers');
             const snapshot = await portfoliosRef.where('isActive', '==', true).get();
             const portfolios = helpers.snapshotToArray(snapshot);
             
+            if (helpers.getBasepath() === undefined || helpers.getBasepath() === '')
+                throw new Error("LOCAL_BASEPATH &/OR PRODUCTION_BASEPATH is not defined.");
+
             // For every active portfolio
             for (const portfolio of portfolios) {
 

@@ -100,6 +100,9 @@ exports = module.exports = functions
                      + ' and short ' + shortToken
                 );
 
+                if (helpers.getBasepath() === undefined || helpers.getBasepath() === '')
+                    throw new Error("LOCAL_BASEPATH &/OR PRODUCTION_BASEPATH is not defined.");
+
                 // Rebalance the pool and debt in a new thread
                 // We're purposely not calling this with await
                 // because we don't want this script to hang. 
