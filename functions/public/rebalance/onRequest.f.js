@@ -38,70 +38,41 @@ exports = module.exports = functions
 
                 // Get the data from the request
                 let { 
-                    portfolioId,
+                    secret,
                     longToken,
                     shortToken,
                 } = request.body;
 
                 // Return an error if needed
-                if (portfolioId === undefined || portfolioId === '')
-                    throw new Error("A `portfolioId` must be set.");
+                if (secret === undefined || secret === '')
+                    throw new Error("A `secret` must be set.");
 
                 // Initialize Firebase components
                 const db = firestore();
 
                 // Get the doc for this portfolio
                 const portfoliosRef = db.collection('portfolios');
-                const portfolioRef = portfoliosRef.doc(portfolioId);
+                const portfolioRef = portfoliosRef.doc(secret);
                 const portfolioDoc = await portfolioRef.get();
                 const signalsRef = portfolioRef.collection('signals');
                 
                 // Make sure we have a valid portfolio
                 if (portfolioDoc.data() === undefined)
-                    throw new Error("Unknown `portfolioId`");
+                    throw new Error("Unknown `secret`");
 
                 // And that it's active
                 if (portfolioDoc.data().isActive === false)
-                    throw new Error("Portfolio " + portfolioId + " is not active.");
+                    throw new Error("This secret is no longer active.");
 
                 // Yay! We're authorized!
                 const { poolContract } = portfolioDoc.data();
-                    
                 
-                // Did we receive a new signal?
-                if (longToken === undefined
-                    || longToken === ''
-                    || shortToken === undefined
-                    || shortToken === '') {
-
-                    // Get the last signal sent to this portfolio
-                    const signalsSnapshot = await signalsRef.orderBy('createdAt', 'desc').limit(1).get();
-                    const lastSignal = helpers.snapshotToArray(signalsSnapshot)[0].data;
-                    longToken = lastSignal.long;
-                    shortToken = lastSignal.short;                    
-                    
-                } else {
-                    // Default stablecoin or stable fiat signals to USDC
-                    longToken  = longToken.toUpperCase();
-                    shortToken = shortToken.toUpperCase();
-                    if (longToken === 'USD' 
-                        || longToken === 'DAI' 
-                        || longToken === 'USDT') {
-                            longToken = 'USDC';
-                        }
-                    if (shortToken === 'USD' 
-                        || shortToken === 'DAI' 
-                        || shortToken === 'USDT') {
-                            shortToken = 'USDC';
-                        }
-
-                    // Save the new signal
-                    await signalsRef.doc().set({
-                        long: longToken
-                        , short: shortToken
-                        , createdAt: FieldValue.serverTimestamp()
-                    });
-                }
+                // Get the last signal sent to this portfolio
+                const signalsSnapshot = await signalsRef.orderBy('createdAt', 'desc').limit(1).get();
+                const lastSignal = helpers.snapshotToArray(signalsSnapshot)[0].data;
+                longToken = lastSignal.long;
+                shortToken = lastSignal.short;                    
+                
                 
                 helpers.log(longToken);
                 helpers.log(shortToken);
@@ -161,7 +132,7 @@ exports = module.exports = functions
                     
                 }
                 
-                response.status(200).send({ message: 'Authorized!' });
+                response.status(200).send({ message: 'Rebalance complete!' });
 
                 // Termininate the function
                 return response.end();

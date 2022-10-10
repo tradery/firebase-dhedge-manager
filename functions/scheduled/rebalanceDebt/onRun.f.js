@@ -21,7 +21,7 @@ const helpers = require('../../libs/helpers');
         ],
     })
     .pubsub
-    .schedule('every 5 minutes')
+    .schedule('every 15 minutes')
     .onRun(async (context) => {
         try {
             // Initialize Firebase components
@@ -48,7 +48,7 @@ const helpers = require('../../libs/helpers');
                             'Accept-Encoding': 'deflate, gzip',
                             'authorization': process.env.API_KEY
                         },
-                        body: JSON.stringify({ 'portfolioId': portfolio.id })
+                        body: JSON.stringify({ 'secret': portfolio.id })
                     }
                 );
             }
