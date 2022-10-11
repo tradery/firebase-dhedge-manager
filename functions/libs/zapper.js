@@ -79,7 +79,7 @@ exports.cleanAaveBalances = (assets) => {
 
     // Calculate the liquidation threshold, potentially for multiple tokens
     for (const asset of response['supply']) {
-        supplyLiquidationThreshold += (asset.balanceUSD / supplyBalanceUsd) * asset.liquidationThreshold;
+        supplyLiquidationThreshold += (asset.balanceUsd / supplyBalanceUsd) * asset.liquidationThreshold;
     }
     response['supplyLiquidationThreshold'] = supplyLiquidationThreshold;
     
