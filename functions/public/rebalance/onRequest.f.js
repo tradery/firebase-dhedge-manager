@@ -72,7 +72,7 @@ exports = module.exports = functions
                     throw new Error("This secret is no longer active.");
 
                 // Yay! We're authorized!
-                const { poolContract } = portfolioDoc.data();
+                const { poolContract, network } = portfolioDoc.data();
                 
                 // Get the last signal sent to this portfolio
                 const signalsSnapshot = await signalsRef.orderBy('createdAt', 'desc').limit(1).get();
@@ -88,7 +88,8 @@ exports = module.exports = functions
                 // @TODO replace mnemonic env with decrypted value from db
                 const pool = await dhedge.initPool(
                     process.env.MNEMONIC,
-                    poolContract
+                    poolContract, 
+                    network
                 );
                 const startingWalletBalances = await dhedge.getPoolBalances(pool);
                 helpers.log(startingWalletBalances);

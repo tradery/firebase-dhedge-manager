@@ -64,13 +64,14 @@ exports = module.exports = functions
                     throw new Error("This secret is no longer active.");
 
                 // Yay! We're authorized!
-                const { poolContract } = portfolioDoc.data();
+                const { poolContract, network } = portfolioDoc.data();
 
                 // Approve spending on exchanges
                 // @TODO replace mnemonic env with decrypted value from db
                 const pool = await dhedge.initPool(
                     process.env.MNEMONIC,
-                    poolContract
+                    poolContract, 
+                    network
                 );
                 await dhedge.approveAllSpendingOnce(pool);
                 
