@@ -15,10 +15,10 @@ exports = module.exports = functions
         memory: "2GB",
         secrets: [
             "API_KEY", 
-            "MNEMONIC", 
             "PROVIDER",
             "COIN_MARKET_CAP_API_KEY",
             "ZAPPER_API_KEY",
+            "MNEMONIC", 
         ],
     })
     .https

@@ -254,54 +254,34 @@ exports.repayDebt = async (token, amount) => {
  * Approve All Spending Once
  * 
  * This method approves the spending of every approved token in the pool
- * on Uniswap, Sushiswap, AAVEv2, AAVEv3.
+ * on AAVE v2, Uniswap v3, etc.
  * 
- * @returns Boolean
+ * @param {Pool} pool dHedge Pool object
+ * @returns {Boolean} Boolean true if successful.
  */
-exports.approveAllSpendingOnce = async () => {
-    const pool = await _this.initPool();
+exports.approveAllSpendingOnce = async (pool) => {
     const assets = await pool.getComposition();
+    const dapps = [
+        Dapp.AAVE,
+        Dapp.UNISWAPV3,
+        // Dapp.AAVEV3,
+        // Dapp.SUSHISWAP,
+        // Dapp.TOROS,
+    ];
 
     for (const asset of assets) {
-        const tx0 = await pool.approve(
-            Dapp.AAVE,
-            asset.asset,
-            ethers.constants.MaxInt256,
-            _this.gasInfo()
-        );
-        helpers.log(tx0);
-    
-        const tx1 = await pool.approve(
-            Dapp.UNISWAPV3,
-            asset.asset,
-            ethers.constants.MaxInt256,
-            _this.gasInfo()
-        );
-        helpers.log(tx1);
-
-        // const tx2 = await pool.approve(
-        //     Dapp.AAVEV3,
-        //     asset.asset,
-        //     ethers.constants.MaxInt256,
-        //     _this.gasInfo()
-        // );
-        // helpers.log(tx2);
-
-        // const tx3 = await pool.approve(
-        //     Dapp.SUSHISWAP,
-        //     asset.asset,
-        //     ethers.constants.MaxInt256,
-        //     _this.gasInfo()
-        // );
-        // helpers.log(tx3);
-
-        // const tx4 = await pool.approve(
-        //     Dapp.TOROS,
-        //     asset.asset,
-        //     ethers.constants.MaxInt256,
-        //     _this.gasInfo()
-        // );
-        // helpers.log(tx4);
+        for (const dapp of dapps) {
+            helpers.log(
+                'Approving spending of ' + asset.asset
+                + ' on ' + dapp
+            );
+            await pool.approve(
+                dapp,
+                asset.asset,
+                ethers.constants.MaxInt256,
+                _this.gasInfo()
+            );
+        }
     }
 
     return true;
