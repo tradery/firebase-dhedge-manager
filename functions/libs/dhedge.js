@@ -130,10 +130,7 @@ exports.getPoolBalances = async (pool) => {
             tokenDetails.decimals,
             tokenDetails.usdPrice
         );
-        assets.push({
-            ...tokenDetails,
-            ...tokenBalance
-        });
+        assets.push(Object.assign(tokenDetails, tokenBalance));
     }
     return assets;
 }
