@@ -257,20 +257,24 @@ exports.repayDebt = async (token, amount) => {
  * on AAVE v2, Uniswap v3, etc.
  * 
  * @param {Pool} pool dHedge Pool object
+ * @param {Array} dapps A list of dapps to approve
  * @returns {Boolean} Boolean true if successful.
  */
-exports.approveAllSpendingOnce = async (pool) => {
+exports.approveAllSpendingOnce = async (pool, dapps) => {
     const assets = await pool.getComposition();
-    const dapps = [
-        Dapp.AAVE,
-        Dapp.UNISWAPV3,
-        // Dapp.AAVEV3,
-        // Dapp.SUSHISWAP,
-        // Dapp.TOROS,
-    ];
+    let dappsToApprove = dapps;
+    if (dappsToApprove === undefined) {
+        dappsToApprove = [
+            Dapp.AAVE,
+            Dapp.UNISWAPV3,
+            // Dapp.AAVEV3,
+            // Dapp.SUSHISWAP,
+            // Dapp.TOROS,
+        ];
+    }
 
     for (const asset of assets) {
-        for (const dapp of dapps) {
+        for (const dapp of dappsToApprove) {
             helpers.log(
                 'Approving spending of ' + asset.asset
                 + ' on ' + dapp
