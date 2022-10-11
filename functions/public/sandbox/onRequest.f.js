@@ -59,9 +59,13 @@ exports = module.exports = functions
                     process.env.POOL_ADDRESS,
                     'polygon'
                 );
-                // helpers.log(await dhedge.getComposition(pool));
                 helpers.log(await dhedge.getPoolBalances(pool));
 
+                const tx1 = await dhedge.borrowDebt(pool, dhedge.tokens.polygon.USDC.address, '2000000');
+                const tx2 = await dhedge.repayDebt(pool, dhedge.tokens.polygon.USDC.address, '5000000');
+                // helpers.log('Borrowing 0.00005 WBTC');
+                helpers.log(tx1);
+                helpers.log(tx2);
                 
                 // console.log(dhedge.getBalance(poolInfo, dhedge.tokens.AAVEV3));
                 // console.log(await coinmarketcap.btcPrice());

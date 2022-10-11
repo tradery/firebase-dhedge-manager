@@ -103,6 +103,9 @@ exports = module.exports = functions
                 // Check our last signal to see what we are long/short
                 if (longToken === 'USDC' && shortToken === 'USDC') {
                     // WHILE ANY DEBT EXISTS
+                        
+                        // @TODO refactor aave.reduceDebt()
+
                         // Calculate max supply to withdrawl
                         // Withdrawl max supply
                         // UniswapV3 into Short token
@@ -121,11 +124,29 @@ exports = module.exports = functions
                         // Repeat
                     // Withdraw any remaining supply that isn't our Long token
 
-                    // IF WE HAVE TOKENS IN OUR WALLET
-                        // IF TOKENS ARE DIFFERENT FROM OUR LONG TOKEN
-                            // UniswapV3 into Long tokens
+                    for (token of startingWalletBalances) {
+                        // IF WE HAVE TOKENS IN OUR WALLET WITH A BALANCE
+                        if (token.balanceUsd > 0) {
+                            
+                            // IF TOKENS ARE DIFFERENT FROM OUR LONG TOKEN
+                            if (token.symbol !== longToken) {
+                                // UniswapV3 into Long tokens
+                                helpers.log(
+                                    'Swap ' + token.balanceDecimal
+                                    + ' ' + token.symbol
+                                    + ' into ' + longToken
+                                    + ' using Uniswap v3'
+                                );
+                            }
 
-                        // Lend Long tokens to AAVE
+                            // Lend Long tokens to AAVE
+                            helpers.log(
+                                'Lend $' + token.balanceUsd
+                                + ' worth of ' + longToken
+                                + ' to AAVE v2'
+                            );
+                        }
+                    }
 
                     // WHILE TARGET LEVERAGE NOT YET REACHED (e.g. 1.75x)
                         // Calculate max debt to borrow

@@ -184,14 +184,19 @@ exports.decimalToInteger = (amount, decimals) => {
     return isFinite(response) ? response : null;
 }
 
-exports.tradeUniswap = async (from, to, amountOfFromToken) => {
+exports.tradeUniswap = async (
+        from, 
+        to, 
+        amountOfFromToken, 
+        slippageTolerance = 0.5,
+        feeTier = 500
+    ) => {
     const pool = await _this.initPool();
-    const slippageTolerance = 0.5;
     const tx = await pool.tradeUniswapV3(
         from,
         to,
         amountOfFromToken,
-        500,
+        feeTier,
         slippageTolerance,
         _this.gasInfo()
     );
@@ -248,8 +253,7 @@ exports.withdrawDeposit = async (token, amount) => {
     return tx;
 }
 
-exports.borrowDebt = async (token, amount) => {
-    const pool = await _this.initPool();
+exports.borrowDebt = async (pool, token, amount) => {
     const tx = await pool.borrow(
         Dapp.AAVE, 
         token, 
@@ -261,8 +265,7 @@ exports.borrowDebt = async (token, amount) => {
     return tx;
 }
 
-exports.repayDebt = async (token, amount) => {
-    const pool = await _this.initPool();
+exports.repayDebt = async (pool, token, amount) => {
     const tx = await pool.repay(
         Dapp.AAVE, 
         token, 
