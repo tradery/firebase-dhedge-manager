@@ -68,7 +68,7 @@ exports.addressToTokenDetails = async (address, network = 'polygon') => {
             // Transform into object
             return {
                 symbol: token,
-                address: address,
+                address: address.toLowerCase(),
                 decimals: tokens[token].decimals,
                 usdPrice: usdPrice,
             };
