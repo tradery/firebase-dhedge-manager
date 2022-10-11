@@ -90,6 +90,9 @@ exports.maticPrice = async () => {
  * @returns {Float} Just the token price
  */
  exports.getUsdPrice = async (id) => {
+    if (id === null) {
+        return null;
+    }
     const data = await _this.quotes(id);
-    return data[id]['quote']['USD']['price'];
+    return (data === undefined) ? null : data[id]['quote']['USD']['price'];
 }

@@ -7,36 +7,38 @@ const _this = this;
  * @LIMITATION Locked to Polygon network
  */
 exports.tokens = {
-    USDC: {
-        address:  '0x2791bca1f2de4661ed88a30c99a7a9449aa84174',
-        decimals: 6,
-        coinMarketCapId: 3408,
-    },
-    WBTC: {
-        address:  '0x1bfd67037b42cf73acf2047067bd4f2c47d9bfd6',
-        decimals: 8,
-        coinMarketCapId: 1,
-
-    },
-    WETH: {
-        address:  '0x7ceb23fd6bc0add59e62ac25578270cff1b9f619',
-        decimals: 18,
-        coinMarketCapId: 1027,
-    },
-    MATIC: {
-        address:  '0x0000000000000000000000000000000000001010',
-        decimals: 18,
-        coinMarketCapId: 3890,
-    },
-    AAVEV2: {
-        address:  '0x8dff5e27ea6b7ac08ebfdf9eb090f32ee9a30fcf',
-        decimals: null,
-        coinMarketCapId: null,
-    },
+    polygon: {
+        USDC: {
+            address:  '0x2791bca1f2de4661ed88a30c99a7a9449aa84174',
+            decimals: 6,
+            coinMarketCapId: 3408,
+        },
+        WBTC: {
+            address:  '0x1bfd67037b42cf73acf2047067bd4f2c47d9bfd6',
+            decimals: 8,
+            coinMarketCapId: 1,
+    
+        },
+        WETH: {
+            address:  '0x7ceb23fd6bc0add59e62ac25578270cff1b9f619',
+            decimals: 18,
+            coinMarketCapId: 1027,
+        },
+        MATIC: {
+            address:  '0x0000000000000000000000000000000000001010',
+            decimals: 18,
+            coinMarketCapId: 3890,
+        },
+        AAVEV2: {
+            address:  '0x8dff5e27ea6b7ac08ebfdf9eb090f32ee9a30fcf',
+            decimals: null,
+            coinMarketCapId: null,
+        },
+    }
 };
 
-exports.addressToSymbol = (address) => {
-    const tokens = _this.tokens;
+exports.addressToSymbol = (address, network = 'polygon') => {
+    const tokens = _this.tokens[network];
     for (const token in tokens) {
         if (tokens[token].address.toLowerCase() === address.toLowerCase()) {
             return token;
@@ -45,33 +47,42 @@ exports.addressToSymbol = (address) => {
     return null;
 }
 
-exports.addressToTokenDetails = (address) => {
-    const tokens = _this.tokens;
+exports.addressToTokenDetails = async (address, network = 'polygon') => {
+    const tokens = _this.tokens[network];
     for (const token in tokens) {
         if (tokens[token].address.toLowerCase() === address.toLowerCase()) {
-            // get usd price from coin market cap
+            // Get usd price from coin market cap
+            const usdPrice = await coinmarketcap.getUsdPrice(tokens[token].coinMarketCapId);
 
-            // transform into object
+            // Transform into object
             return {
                 symbol: token,
                 address: address,
                 decimals: tokens[token].decimals,
-                usdPrice: '',
+                usdPrice: usdPrice,
             };
         }
     }
     return null;
 }
 
-exports.initPool = async () => {
+/**
+ * Initial dHedge Pool
+ * 
+ * @param {String} mnemonic The mnemonic for the pool trader's wallet.
+ * @param {String} poolAddress The address of a dhedge pool contract.
+ * @param {String} network The blockchain network for this pool contract.
+ * @returns {Object} a dhedge pool.
+ */
+exports.initPool = async (mnemonic, poolAddress, network = Network.POLYGON) => {
     // Initialize our wallet
     const provider = new ethers.providers.JsonRpcProvider(process.env.PROVIDER);
-    const wallet = new ethers.Wallet.fromMnemonic(process.env.MNEMONIC);
+    const wallet = new ethers.Wallet.fromMnemonic(mnemonic);
     const walletWithProvider = wallet.connect(provider);
     
     // Initialize dHedge v2 API
-    const dhedge = new Dhedge(walletWithProvider, Network.POLYGON);
-    return await dhedge.loadPool(process.env.POOL_ADDRESS);
+    const dhedge = new Dhedge(walletWithProvider, network);
+    return await dhedge.loadPool(poolAddress);
 }
 
 exports.gasInfo = () => {
@@ -82,10 +93,39 @@ exports.gasInfo = () => {
   return gas;
 }
 
-exports.getComposition = async () => {
-    const pool = await _this.initPool();
+/**
+ * 
+ * @param {Pool} pool a dHedge Pool object
+ * @returns {Array} A list of assets approved for trading
+ */
+exports.getComposition = async (pool) => {
     return await pool.getComposition();
 };
+
+/**
+ * Get Pool Balances
+ * 
+ * @param {Pool} pool a dHedge Pool object
+ * @returns {Array} A list of tokens with info and balances
+ */
+exports.getPoolBalances = async (pool) => {
+    const composition = await _this.getComposition(pool);
+    const network = pool.network;
+    let assets = [];
+    for (const asset of composition) {
+        const tokenDetails = await _this.addressToTokenDetails(asset.asset, network);
+        const tokenBalance = _this.getBalanceInfo(
+            ethers.BigNumber.from(asset.balance), 
+            tokenDetails.decimals,
+            tokenDetails.usdPrice
+        );
+        assets.push({
+            ...tokenDetails,
+            ...tokenBalance
+        });
+    }
+    return assets;
+}
 
 /**
  * Get Balance of a Token
@@ -104,18 +144,21 @@ exports.getBalance = (assets, token) => {
     throw new Error('Could not find the specified asset (' + token + ') in the pool.');
 }
 
-exports.getBalanceInfo = (amountBN, decimals) => {
-    const amountDecimal = ethers.utils.formatUnits(amountBN, decimals);
-
+exports.getBalanceInfo = (amountBN, decimals, tokenPriceUsd) => {
+    const balanceDecimal = ethers.utils.formatUnits(amountBN, decimals);
+    const balanceInt = _this.decimalToInteger(balanceDecimal, decimals);
+    const balanceUsd = tokenPriceUsd * balanceDecimal;
     return {
-        bigNumber: amountBN,
-        decimal: amountDecimal,
-        integer: _this.decimalToInteger(amountDecimal),
+        balanceBn: amountBN,
+        balanceDecimal: balanceDecimal,
+        balanceInt: balanceInt,
+        balanceUsd: balanceUsd
     }
 }
 
 exports.decimalToInteger = (amount, decimals) => {
-    return Math.round(amount*('1e' + decimals));
+    const response = Math.round(amount*('1e' + decimals));
+    return isFinite(response) ? response : null;
 }
 
 exports.tradeUniswap = async (from, to, amountOfFromToken) => {
@@ -229,36 +272,36 @@ exports.approveAllSpendingOnce = async () => {
         helpers.log(tx0);
     
         const tx1 = await pool.approve(
-            Dapp.AAVEV3,
+            Dapp.UNISWAPV3,
             asset.asset,
             ethers.constants.MaxInt256,
             _this.gasInfo()
         );
         helpers.log(tx1);
 
-        const tx2 = await pool.approve(
-            Dapp.UNISWAPV3,
-            asset.asset,
-            ethers.constants.MaxInt256,
-            _this.gasInfo()
-        );
-        helpers.log(tx2);
+        // const tx2 = await pool.approve(
+        //     Dapp.AAVEV3,
+        //     asset.asset,
+        //     ethers.constants.MaxInt256,
+        //     _this.gasInfo()
+        // );
+        // helpers.log(tx2);
 
-        const tx3 = await pool.approve(
-            Dapp.SUSHISWAP,
-            asset.asset,
-            ethers.constants.MaxInt256,
-            _this.gasInfo()
-        );
-        helpers.log(tx3);
+        // const tx3 = await pool.approve(
+        //     Dapp.SUSHISWAP,
+        //     asset.asset,
+        //     ethers.constants.MaxInt256,
+        //     _this.gasInfo()
+        // );
+        // helpers.log(tx3);
 
-        const tx4 = await pool.approve(
-            Dapp.TOROS,
-            asset.asset,
-            ethers.constants.MaxInt256,
-            _this.gasInfo()
-        );
-        helpers.log(tx4);
+        // const tx4 = await pool.approve(
+        //     Dapp.TOROS,
+        //     asset.asset,
+        //     ethers.constants.MaxInt256,
+        //     _this.gasInfo()
+        // );
+        // helpers.log(tx4);
     }
 
     return true;

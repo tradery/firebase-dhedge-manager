@@ -64,9 +64,9 @@ exports.cleanAaveBalances = (assets) => {
             'decimals': asset.tokens[0].decimals,
             'usdPrice': asset.tokens[0].price,
             'balanceDecimal': asset.tokens[0].balance,
-            'balanceRaw': asset.tokens[0].balanceRaw,
-            'balanceUSD': asset.tokens[0].balanceUSD,
-            'balanceBN': ethers.BigNumber.from(asset.tokens[0].balanceRaw),
+            'balanceInt': asset.tokens[0].balanceRaw,
+            'balanceUsd': asset.tokens[0].balanceUSD,
+            'balanceBn': ethers.BigNumber.from(asset.tokens[0].balanceRaw),
             'liquidationThreshold': asset.dataProps.liquidationThreshold,
         });
 
@@ -99,9 +99,9 @@ exports.cleanAaveBalances = (assets) => {
 //        decimals: 6,
 //        usdPrice: 0.999632,
 //        balanceDecimal: 5.00079,
-//        balanceRaw: '5000790',
-//        balanceUSD: 4.99894970928,
-//        balanceBN: BigNumber { _hex: '0x4c4e56', _isBigNumber: true },
+//        balanceInt: '5000790',
+//        balanceUsd: 4.99894970928,
+//        balanceBn: BigNumber { _hex: '0x4c4e56', _isBigNumber: true },
 //        liquidationThreshold: 0.85
 //      },
 //      {
@@ -110,9 +110,9 @@ exports.cleanAaveBalances = (assets) => {
 //        decimals: 8,
 //        usdPrice: 19100.39,
 //        balanceDecimal: 0.00008215,
-//        balanceRaw: '8215',
-//        balanceUSD: 1.5690970385,
-//        balanceBN: BigNumber { _hex: '0x2017', _isBigNumber: true },
+//        balanceInt: '8215',
+//        balanceUsd: 1.5690970385,
+//        balanceBn: BigNumber { _hex: '0x2017', _isBigNumber: true },
 //        liquidationThreshold: 0.75
 //      }
 //    ],
@@ -123,9 +123,9 @@ exports.cleanAaveBalances = (assets) => {
 //        decimals: 8,
 //        usdPrice: 19100.39,
 //        balanceDecimal: 0.00005159,
-//        balanceRaw: '5159',
-//        balanceUSD: 0.9853891200999999,
-//        balanceBN: BigNumber { _hex: '0x1427', _isBigNumber: true },
+//        balanceInt: '5159',
+//        balanceUsd: 0.9853891200999999,
+//        balanceBn: BigNumber { _hex: '0x1427', _isBigNumber: true },
 //        liquidationThreshold: 0.75
 //      },
 //      {
@@ -134,9 +134,9 @@ exports.cleanAaveBalances = (assets) => {
 //        decimals: 6,
 //        usdPrice: 0.999632,
 //        balanceDecimal: 1.000263,
-//        balanceRaw: '1000263',
-//        balanceUSD: 0.9998949032159998,
-//        balanceBN: BigNumber { _hex: '0x0f4347', _isBigNumber: true },
+//        balanceInt: '1000263',
+//        balanceUsd: 0.9998949032159998,
+//        balanceBn: BigNumber { _hex: '0x0f4347', _isBigNumber: true },
 //        liquidationThreshold: 0.85
 //      }
 //    ],

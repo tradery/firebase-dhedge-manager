@@ -1,9 +1,9 @@
 const functions = require('firebase-functions');
 const { firestore } = require('firebase-admin');
-const FieldValue = firestore.FieldValue;
 const cors = require('cors')({ origin: true });
 const helpers = require('../../libs/helpers');
 const zapper = require('../../libs/zapper');
+const dhedge = require('../../libs/dhedge');
 
 /**
  * Rebalance portfolio tokens and debt
@@ -85,13 +85,19 @@ exports = module.exports = functions
                 helpers.log(poolContract);
 
                 // Check wallet balances with dhedge
-                
-                
+                // @TODO replace mnemonic env with decrypted value from db
+                const pool = await dhedge.initPool(
+                    process.env.MNEMONIC,
+                    poolContract
+                );
+                const startingWalletBalances = await dhedge.getPoolBalances(pool);
+                helpers.log(startingWalletBalances);
+
                 // Check AAVE balances with zapper
-                const aaveBalances = zapper.cleanAaveBalances(
+                const startingAaveBalances = zapper.cleanAaveBalances(
                     await zapper.aaveBalances(poolContract)
                 );
-                helpers.log(aaveBalances);
+                helpers.log(startingAaveBalances);
 
                 // Check our last signal to see what we are long/short
                 if (longToken === 'USDC' && shortToken === 'USDC') {

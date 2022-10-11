@@ -54,8 +54,12 @@ exports = module.exports = functions
                 // } = request.body;
                 // await dhedge.addMember(memberAddress);
                 
-                const poolInfo = await dhedge.getComposition();
-                helpers.log(poolInfo);
+                const pool = await dhedge.initPool(
+                    process.env.MNEMONIC,
+                    process.env.POOL_ADDRESS
+                );
+                // helpers.log(await dhedge.getComposition(pool));
+                helpers.log(await dhedge.getPoolBalances(pool));
 
                 
                 // console.log(dhedge.getBalance(poolInfo, dhedge.tokens.AAVEV3));
