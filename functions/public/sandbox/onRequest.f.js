@@ -56,7 +56,8 @@ exports = module.exports = functions
                 
                 const pool = await dhedge.initPool(
                     process.env.MNEMONIC,
-                    process.env.POOL_ADDRESS
+                    process.env.POOL_ADDRESS,
+                    'polygon'
                 );
                 // helpers.log(await dhedge.getComposition(pool));
                 helpers.log(await dhedge.getPoolBalances(pool));
