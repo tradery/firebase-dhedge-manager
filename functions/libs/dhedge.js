@@ -3,9 +3,6 @@ const helpers = require('./helpers');
 const coinmarketcap = require('./coinmarketcap');
 const _this = this;
 
-/**
- * @LIMITATION Locked to Polygon network
- */
 exports.tokens = {
     polygon: {
         USDC: {
@@ -37,6 +34,13 @@ exports.tokens = {
     }
 };
 
+/**
+ * Address to Token Symbol
+ * 
+ * @param {String} address a token contract address
+ * @param {String} network a blockchain network
+ * @returns {String} a token symbol
+ */
 exports.addressToSymbol = (address, network = 'polygon') => {
     const tokens = _this.tokens[network];
     for (const token in tokens) {
@@ -47,6 +51,13 @@ exports.addressToSymbol = (address, network = 'polygon') => {
     return null;
 }
 
+/**
+ * Token Address to Token Details
+ * 
+ * @param {String} address a token contract address
+ * @param {String} network a blockchain network
+ * @returns {Object} a list of useful information about a token
+ */
 exports.addressToTokenDetails = async (address, network = 'polygon') => {
     const tokens = _this.tokens[network];
     for (const token in tokens) {
@@ -144,6 +155,14 @@ exports.getBalance = (assets, token) => {
     throw new Error('Could not find the specified asset (' + token + ') in the pool.');
 }
 
+/**
+ * Get Balance Info for a Token
+ * 
+ * @param {BigNumber} amountBN Amount in ethers.BigNumber format
+ * @param {Integer} decimals Number of decimal places to consider
+ * @param {Float} tokenPriceUsd The USD price of a token to convert the big number
+ * @returns {Object} A list of balances in different formats
+ */
 exports.getBalanceInfo = (amountBN, decimals, tokenPriceUsd) => {
     const balanceDecimal = ethers.utils.formatUnits(amountBN, decimals);
     const balanceInt = _this.decimalToInteger(balanceDecimal, decimals);
@@ -156,6 +175,13 @@ exports.getBalanceInfo = (amountBN, decimals, tokenPriceUsd) => {
     }
 }
 
+/**
+ * Decial to Integer
+ * 
+ * @param {Float} amount Some decimal amount
+ * @param {Integer} decimals Number of decimal places
+ * @returns {Integer} The value without decimals
+ */
 exports.decimalToInteger = (amount, decimals) => {
     const response = Math.round(amount*('1e' + decimals));
     return isFinite(response) ? response : null;
