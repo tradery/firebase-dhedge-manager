@@ -93,6 +93,12 @@ exports = module.exports = functions
                         shortToken = 'USDC';
                     }
 
+                // Make sure we're targeting the right tokens
+                if (longToken  === 'BTC') longToken  = 'WBTC'; 
+                if (shortToken === 'BTC') shortToken = 'WBTC';
+                if (longToken  === 'ETH') longToken  = 'WETH';
+                if (shortToken === 'ETH') shortToken = 'WETH';
+
                 // Get the value of the last saved signal
                 const signalsSnapshot = await signalsRef.orderBy('createdAt', 'desc').limit(1).get();
                 const lastSignal = helpers.snapshotToArray(signalsSnapshot)[0].data;
