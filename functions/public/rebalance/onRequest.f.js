@@ -80,9 +80,9 @@ exports = module.exports = functions
                 longToken = lastSignal.long;
                 shortToken = lastSignal.short;
                 
-                helpers.log(longToken);
-                helpers.log(shortToken);
-                helpers.log(poolContract);
+                helpers.log('Long Token:    ' + longToken);
+                helpers.log('Short Token:   ' + shortToken);
+                helpers.log('Pool Contract: ' + poolContract);
 
                 // Check wallet balances with dhedge
                 // @TODO replace mnemonic env with decrypted value from db
@@ -102,27 +102,52 @@ exports = module.exports = functions
 
                 // Check our last signal to see what we are long/short
                 if (longToken === 'USDC' && shortToken === 'USDC') {
-                    // WHILE ANY DEBT EXISTS
+                    
+                    // If debt exist...
+                    if (startingAaveBalances['variable-debt'].length > 0) {
+                        // await aave.reduceDebt();
+                        helpers.log('This is where we would reduce all debt...');
+                    
+                            // Calculate max supply to withdrawl
+                            // Withdrawl max supply
+                            // UniswapV3 into Short token
+                            // Repay AAVE debt
+                            // Repeat
                         
-                        // @TODO refactor aave.reduceDebt()
+                        // update the startingAaveBalances['supply'] with new numbers after reducing debt
+                    }
 
-                        // Calculate max supply to withdrawl
-                        // Withdrawl max supply
-                        // UniswapV3 into Short token
-                        // Repay AAVE debt
-                        // Repeat
-                    // Withdraw any remaining supply
+                    for (token of startingAaveBalances['supply']) {
+                        // Withdraw any remaining supply
+                        helpers.log('This is where we withdrawl any remaining ' + token.symbol + ' supply...');
+                    }
 
-                    // IF WE HAVE NON-USDC TOKENS
-                        // UniswapV3 into USDC
+                    // Swap into USDC as needed
+                    helpers.log('This is where we will swap any non USDC into USDC');
+                    helpers.log('Now we are holding only USDC and have AAVE cleared');
+                        
                 } else {
-                    // WHILE ANY NON-short-TOKEN DEBT EXISTS
-                        // Calculate max supply to withdrawl
-                        // Withdrawl max supply
-                        // UniswapV3 into Short token
-                        // Repay AAVE debt
-                        // Repeat
-                    // Withdraw any remaining supply that isn't our Long token
+                    // If any non-short token debt exists
+                    if (startingAaveBalances['variable-debt'].length > 0
+                        && startingAaveBalances['variable-debt'][0].symbol !== shortToken) {
+                            // await aave.reduceDebt();
+                            helpers.log('This is where we would reduce ' + startingAaveBalances['variable-debt'][0].symbol + ' debt...');
+                        
+                                // Calculate max supply to withdrawl
+                                // Withdrawl max supply
+                                // UniswapV3 into Short token
+                                // Repay AAVE debt
+                                // Repeat
+
+                            // update the startingWalletBalances['supply'] with new numbers after reducing debt
+
+                            for (token of startingWalletBalances['supply']) {
+                                if (token.symbol !== longToken) {
+                                    // Withdraw any remaining supply that isn't our long token
+                                    helpers.log('This is where we would withdrawl any remaining supply that isn\'t our long token...');
+                                }
+                            }
+                    }
 
                     for (token of startingWalletBalances) {
                         // IF WE HAVE TOKENS IN OUR WALLET WITH A BALANCE
@@ -148,6 +173,9 @@ exports = module.exports = functions
                         }
                     }
 
+                    // await aave.borrow(shortToken);
+                    helpers.log('This is where we borrow ' + shortToken
+                        + ' and swap into ' + longToken + ' until we reach target leverage');
                     // WHILE TARGET LEVERAGE NOT YET REACHED (e.g. 1.75x)
                         // Calculate max debt to borrow
                         // Borrow max debt
@@ -155,6 +183,8 @@ exports = module.exports = functions
                         // Lend Long tokens to AAVE
                         // Repeat
 
+                    helpers.log('This is where, if needed, we borrow more ' + shortToken
+                        + ' and swap into ' + longToken + ' until we reach our liquidaton health cieling');
                     // WHILE LIQUIDATION HEALTH ABOVE TARGET CEILING (e.g. 1.5)
                         // Calculate max debt to borrow
                         // Borrow max debt
@@ -162,6 +192,9 @@ exports = module.exports = functions
                         // Lend Long tokens to AAVE
                         // Repeat
 
+                    // aave.reduceDebt(1.3)
+                    helpers.log('This is where, if needed, we withdrawl ' + longToken
+                        + ' and swap into ' + shortToken + ' and repay debt until we reach our liquidaton health floor');
                     // WHILE LIQUIDATION HEALTH BELOW TARGET FLOOR (e.g. 1.3)
                         // Calculate max supply to withdrawl
                         // Withdrawl max supply
@@ -169,6 +202,8 @@ exports = module.exports = functions
                         // Repay AAVE debt
                         // Repeat
                     
+                    helpers.log('Now our wallet is empty and AAVE has maxed leverage'
+                        + ' with ' + longToken + ' supplied as collateral for ' + shortToken + ' debt');
                 }
                 
                 response.status(200).send({ message: 'Rebalance complete!' });
