@@ -52,6 +52,10 @@ exports = module.exports = functions
                 if (secret === undefined || secret === '')
                     throw new Error("A `secret` must be set.");
 
+                /**
+                 * @TODO Support rebalancing from scheduled task
+                 */
+
                 // Return an error if needed
                 if (longToken === undefined || longToken === '')
                     throw new Error("A `longToken` must be set.");

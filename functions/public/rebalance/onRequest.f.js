@@ -4,6 +4,7 @@ const cors = require('cors')({ origin: true });
 const helpers = require('../../libs/helpers');
 const zapper = require('../../libs/zapper');
 const dhedge = require('../../libs/dhedge');
+const aave = require('../../libs/aave');
 
 /**
  * Rebalance portfolio tokens and debt
@@ -107,17 +108,13 @@ exports = module.exports = functions
                     if (startingAaveBalances['variable-debt'].length > 0) {
                         // await aave.reduceDebt();
                         helpers.log('This is where we would reduce all debt...');
+                        await aave.reduceDebt(pool, startingAaveBalances, startingWalletBalances);
                     
-                            // Calculate max supply to withdrawl
-                            // Withdrawl max supply
-                            // UniswapV3 into Short token
-                            // Repay AAVE debt
-                            // Repeat
                         
                         // update the startingAaveBalances['supply'] with new numbers after reducing debt
                     }
 
-                    for (token of startingAaveBalances['supply']) {
+                    for (const token of startingAaveBalances['supply']) {
                         // Withdraw any remaining supply
                         helpers.log('This is where we withdrawl any remaining ' + token.symbol + ' supply...');
                     }
@@ -139,17 +136,17 @@ exports = module.exports = functions
                                 // Repay AAVE debt
                                 // Repeat
 
-                            // update the startingWalletBalances['supply'] with new numbers after reducing debt
+                            // update the startingAaveBalances['supply'] with new numbers after reducing debt
 
-                            for (token of startingWalletBalances['supply']) {
+                            for (const token of startingAaveBalances['supply']) {
                                 if (token.symbol !== longToken) {
                                     // Withdraw any remaining supply that isn't our long token
-                                    helpers.log('This is where we would withdrawl any remaining supply that isn\'t our long token...');
+                                    helpers.log('This is where we would withdrawl any remaining supply that isn\'t ' + longToken);
                                 }
                             }
                     }
 
-                    for (token of startingWalletBalances) {
+                    for (const token of startingWalletBalances) {
                         // IF WE HAVE TOKENS IN OUR WALLET WITH A BALANCE
                         if (token.balanceUsd > 0) {
                             

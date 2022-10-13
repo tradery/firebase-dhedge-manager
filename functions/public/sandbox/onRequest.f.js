@@ -44,9 +44,9 @@ exports = module.exports = functions
                 // Authorized!
 
                 // await btcSuperYield.long();
-                // const aaveBalances = await zapper.aaveBalances(process.env.POOL_ADDRESS);
+                const aaveBalances = await zapper.aaveBalances(process.env.POOL_ADDRESS);
                 // helpers.log(aaveBalances);
-                // helpers.log(zapper.cleanAaveBalances(aaveBalances));
+                helpers.log(zapper.cleanAaveBalances(aaveBalances));
 
                 // Get the data from the request
                 // const { 
@@ -54,18 +54,18 @@ exports = module.exports = functions
                 // } = request.body;
                 // await dhedge.addMember(memberAddress);
                 
-                const pool = await dhedge.initPool(
-                    process.env.MNEMONIC,
-                    process.env.POOL_ADDRESS,
-                    'polygon'
-                );
-                helpers.log(await dhedge.getPoolBalances(pool));
+                // const pool = await dhedge.initPool(
+                //     process.env.MNEMONIC,
+                //     process.env.POOL_ADDRESS,
+                //     'polygon'
+                // );
+                // helpers.log(await dhedge.getPoolBalances(pool));
 
-                const tx1 = await dhedge.borrowDebt(pool, dhedge.tokens.polygon.USDC.address, '2000000');
-                const tx2 = await dhedge.repayDebt(pool, dhedge.tokens.polygon.USDC.address, '5000000');
-                // helpers.log('Borrowing 0.00005 WBTC');
-                helpers.log(tx1);
-                helpers.log(tx2);
+                // const tx1 = await dhedge.borrowDebt(pool, dhedge.tokens.polygon.USDC.address, '2000000');
+                // const tx2 = await dhedge.repayDebt(pool, dhedge.tokens.polygon.USDC.address, '5000000');
+                // // helpers.log('Borrowing 0.00005 WBTC');
+                // helpers.log(tx1);
+                // helpers.log(tx2);
                 
                 // console.log(dhedge.getBalance(poolInfo, dhedge.tokens.AAVEV3));
                 // console.log(await coinmarketcap.btcPrice());

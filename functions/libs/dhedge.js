@@ -34,22 +34,22 @@ exports.tokens = {
     }
 };
 
-/**
- * Address to Token Symbol
- * 
- * @param {String} address a token contract address
- * @param {String} network a blockchain network
- * @returns {String} a token symbol
- */
-exports.addressToSymbol = (address, network = 'polygon') => {
-    const tokens = _this.tokens[network];
-    for (const token in tokens) {
-        if (tokens[token].address.toLowerCase() === address.toLowerCase()) {
-            return token;
-        }
-    }
-    return null;
-}
+// /**
+//  * Address to Token Symbol
+//  * 
+//  * @param {String} address a token contract address
+//  * @param {String} network a blockchain network
+//  * @returns {String} a token symbol
+//  */
+// exports.addressToSymbol = (address, network = 'polygon') => {
+//     const tokens = _this.tokens[network];
+//     for (const token in tokens) {
+//         if (tokens[token].address.toLowerCase() === address.toLowerCase()) {
+//             return token;
+//         }
+//     }
+//     return null;
+// }
 
 /**
  * Token Address to Token Details
@@ -97,11 +97,11 @@ exports.initPool = async (mnemonic, poolAddress, network = Network.POLYGON) => {
 }
 
 exports.gasInfo = () => {
-  const gas = {
-    gasPrice: ethers.utils.parseUnits('50', 'gwei'),
-    gasLimit: 3000000
-  }
-  return gas;
+    const gas = {
+        gasPrice: ethers.utils.parseUnits('100', 'gwei'),
+        gasLimit: 5000000
+    }
+    return gas;
 }
 
 /**
@@ -135,22 +135,22 @@ exports.getPoolBalances = async (pool) => {
     return assets;
 }
 
-/**
- * Get Balance of a Token
- * 
- * @param {Array} assets An array returned from pool.getComposition()
- * @param {String} token A token's contract address
- * @returns {BigNumber} A token balance in hexidecimal format
- */
-exports.getBalance = (assets, token) => {
-    for (const asset of assets) {
-        if (asset.asset.toLowerCase() === token.toLowerCase()) {
-            return ethers.BigNumber.from(asset.balance);
-        }
-    }
+// /**
+//  * Get Balance of a Token
+//  * 
+//  * @param {Array} assets An array returned from pool.getComposition()
+//  * @param {String} token A token's contract address
+//  * @returns {BigNumber} A token balance in hexidecimal format
+//  */
+// exports.getBalance = (assets, token) => {
+//     for (const asset of assets) {
+//         if (asset.asset.toLowerCase() === token.toLowerCase()) {
+//             return ethers.BigNumber.from(asset.balance);
+//         }
+//     }
 
-    throw new Error('Could not find the specified asset (' + token + ') in the pool.');
-}
+//     throw new Error('Could not find the specified asset (' + token + ') in the pool.');
+// }
 
 /**
  * Get Balance Info for a Token
@@ -172,6 +172,8 @@ exports.getBalanceInfo = (amountBN, decimals, tokenPriceUsd) => {
     }
 }
 
+
+
 /**
  * Decial to Integer
  * 
@@ -185,13 +187,13 @@ exports.decimalToInteger = (amount, decimals) => {
 }
 
 exports.tradeUniswap = async (
+        pool,
         from, 
         to, 
         amountOfFromToken, 
         slippageTolerance = 0.5,
         feeTier = 500
     ) => {
-    const pool = await _this.initPool();
     const tx = await pool.tradeUniswapV3(
         from,
         to,
@@ -241,8 +243,7 @@ exports.lendDeposit = async (token, amount) => {
     return tx;
 }
 
-exports.withdrawDeposit = async (token, amount) => {
-    const pool = await _this.initPool();
+exports.withdrawLentTokens = async (pool, token, amount) => {
     const tx = await pool.withdrawDeposit(
         Dapp.AAVE, 
         token, 

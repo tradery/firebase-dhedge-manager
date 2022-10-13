@@ -50,7 +50,7 @@ const basepath = 'https://api.zapper.fi/v2/';
  */
 exports.cleanAaveBalances = (assets) => {
     if (assets.length === 0) {
-        return [];
+        return null;
     }
 
     let response = {};
@@ -64,7 +64,7 @@ exports.cleanAaveBalances = (assets) => {
             'decimals': asset.tokens[0].decimals,
             'usdPrice': asset.tokens[0].price,
             'balanceDecimal': asset.tokens[0].balance,
-            'balanceInt': asset.tokens[0].balanceRaw,
+            'balanceInt': Number(asset.tokens[0].balanceRaw),
             'balanceUsd': asset.tokens[0].balanceUSD,
             'balanceBn': ethers.BigNumber.from(asset.tokens[0].balanceRaw),
             'liquidationThreshold': asset.dataProps.liquidationThreshold,
@@ -81,7 +81,9 @@ exports.cleanAaveBalances = (assets) => {
     for (const asset of response['supply']) {
         supplyLiquidationThreshold += (asset.balanceUsd / supplyBalanceUsd) * asset.liquidationThreshold;
     }
-    response['supplyLiquidationThreshold'] = supplyLiquidationThreshold;
+    response['liquidationThreshold'] = supplyLiquidationThreshold;
+    response['supplyBalanceUsd'] = supplyBalanceUsd;
+    response['debtBalanceUsd'] = debtBalanceUsd;
     
     // And finally the liquidation health
     const liquidationHealth = supplyLiquidationThreshold / (debtBalanceUsd / supplyBalanceUsd);
@@ -97,49 +99,62 @@ exports.cleanAaveBalances = (assets) => {
 //        symbol: 'USDC',
 //        address: '0x2791bca1f2de4661ed88a30c99a7a9449aa84174',
 //        decimals: 6,
-//        usdPrice: 0.999632,
-//        balanceDecimal: 5.00079,
-//        balanceInt: '5000790',
-//        balanceUsd: 4.99894970928,
-//        balanceBn: BigNumber { _hex: '0x4c4e56', _isBigNumber: true },
+//        usdPrice: 1,
+//        balanceDecimal: 1.000032,
+//        balanceInt: '1000032',
+//        balanceUsd: 1.000032,
+//        balanceBn: BigNumber { _hex: '0x0f4260', _isBigNumber: true },
 //        liquidationThreshold: 0.85
 //      },
 //      {
 //        symbol: 'WBTC',
 //        address: '0x1bfd67037b42cf73acf2047067bd4f2c47d9bfd6',
 //        decimals: 8,
-//        usdPrice: 19100.39,
-//        balanceDecimal: 0.00008215,
-//        balanceInt: '8215',
-//        balanceUsd: 1.5690970385,
-//        balanceBn: BigNumber { _hex: '0x2017', _isBigNumber: true },
+//        usdPrice: 19173.32,
+//        balanceDecimal: 0.00023064,
+//        balanceInt: '23064',
+//        balanceUsd: 4.4221345248,
+//        balanceBn: BigNumber { _hex: '0x5a18', _isBigNumber: true },
 //        liquidationThreshold: 0.75
 //      }
 //    ],
 //    'variable-debt': [
 //      {
-//        symbol: 'WBTC',
-//        address: '0x1bfd67037b42cf73acf2047067bd4f2c47d9bfd6',
-//        decimals: 8,
-//        usdPrice: 19100.39,
-//        balanceDecimal: 0.00005159,
-//        balanceInt: '5159',
-//        balanceUsd: 0.9853891200999999,
-//        balanceBn: BigNumber { _hex: '0x1427', _isBigNumber: true },
-//        liquidationThreshold: 0.75
-//      },
+//        symbol: 'USDC',
+//        address: '0x2791bca1f2de4661ed88a30c99a7a9449aa84174',
+//        decimals: 6,
+//        usdPrice: 1,
+//        balanceDecimal: 1.000062,
+//        balanceInt: '1000062',
+//        balanceUsd: 1.000062,
+//        balanceBn: BigNumber { _hex: '0x0f427e', _isBigNumber: true },
+//        liquidationThreshold: 0.85
+//      }
+//    ],
+//    liquidationThreshold: 0.7684434025665946,
+//    supplyBalanceUsd: 5.4221665248,
+//    debtBalanceUsd: 1.000062,
+//    liquidationHealth: 4.1663697786737215
+//  }
+//
+//
+//
+//  {
+//    supply: [
 //      {
 //        symbol: 'USDC',
 //        address: '0x2791bca1f2de4661ed88a30c99a7a9449aa84174',
 //        decimals: 6,
-//        usdPrice: 0.999632,
-//        balanceDecimal: 1.000263,
-//        balanceInt: '1000263',
-//        balanceUsd: 0.9998949032159998,
-//        balanceBn: BigNumber { _hex: '0x0f4347', _isBigNumber: true },
+//        usdPrice: 1,
+//        balanceDecimal: 5.000957,
+//        balanceInt: '5000957',
+//        balanceUsd: 5.000957,
+//        balanceBn: BigNumber { _hex: '0x4c4efd', _isBigNumber: true },
 //        liquidationThreshold: 0.85
 //      }
 //    ],
-//    supplyLiquidationThreshold: 0.8261101420444312,
-//    liquidationHealth: 2.7330749494977167
+//    liquidationThreshold: 0.85,
+//    supplyBalanceUsd: 5.000957,
+//    debtBalanceUsd: 0,
+//    liquidationHealth: null
 //  }
