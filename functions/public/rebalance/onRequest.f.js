@@ -77,13 +77,14 @@ exports = module.exports = functions
                 
                 // Get the last signal sent to this portfolio
                 const signalsSnapshot = await signalsRef.orderBy('createdAt', 'desc').limit(1).get();
-                const lastSignal = helpers.snapshotToArray(signalsSnapshot)[0].data;
-                longToken = lastSignal.long;
-                shortToken = lastSignal.short;
+                const lastSignal = helpers.snapshotToArray(signalsSnapshot)[0];
+                longToken = lastSignal.data.long;
+                shortToken = lastSignal.data.short;
                 
-                helpers.log('Long Token:    ' + longToken);
-                helpers.log('Short Token:   ' + shortToken);
-                helpers.log('Pool Contract: ' + poolContract);
+                helpers.log('Last signal ID: ' + lastSignal.id);
+                helpers.log('Long Token:     ' + longToken);
+                helpers.log('Short Token:    ' + shortToken);
+                helpers.log('Pool Contract:  ' + poolContract);
 
                 // Check wallet balances with dhedge
                 // @TODO replace mnemonic env with decrypted value from db
@@ -93,60 +94,130 @@ exports = module.exports = functions
                     network
                 );
                 const startingWalletBalances = await dhedge.getPoolBalances(pool);
-                helpers.log(startingWalletBalances);
-
+                
                 // Check AAVE balances with zapper
                 const startingAaveBalances = zapper.cleanAaveBalances(
                     await zapper.aaveBalances(poolContract)
                 );
-                helpers.log(startingAaveBalances);
+
+                // Setup a new variable to track balance changes
+                let newBalances = {
+                    'wallet': startingWalletBalances,
+                    'aave':   startingAaveBalances
+                };
+                helpers.log(newBalances);
 
                 // Check our last signal to see what we are long/short
                 if (longToken === 'USDC' && shortToken === 'USDC') {
                     
                     // If debt exist...
                     if (startingAaveBalances['variable-debt'].length > 0) {
-                        // await aave.reduceDebt();
-                        helpers.log('This is where we would reduce all debt...');
-                        await aave.reduceDebt(pool, startingAaveBalances, startingWalletBalances);
-                    
-                        
-                        // update the startingAaveBalances['supply'] with new numbers after reducing debt
+                            helpers.log('This is where we would reduce all debt...');
+                            newBalances = await aave.reduceDebt(pool, startingAaveBalances, startingWalletBalances);
                     }
 
-                    for (const token of startingAaveBalances['supply']) {
-                        // Withdraw any remaining supply
-                        helpers.log('This is where we withdrawl any remaining ' + token.symbol + ' supply...');
+                    if (startingAaveBalances['supply'].length > 0) {
+                            for (const token of newBalances['aave']['supply']) {
+                                // Withdraw any remaining supply
+                                helpers.log('This is where we withdrawl any remaining ' + token.symbol + ' supply...');
+                                await dhedge.withdrawLentTokens(pool, token.address, token.balanceInt);
+        
+                                // Track updated token balances
+                                newBalances['aave']['supply'] = await dhedge.updateTokenBalance(
+                                    newBalances['aave']['supply'],
+                                    token.address,
+                                    -token.balanceInt,
+                                    pool.network
+                                );
+                                newBalances['wallet'] = await dhedge.updateTokenBalance(
+                                    newBalances['wallet'],
+                                    token.address,
+                                    token.balanceInt,
+                                    pool.network
+                                );
+                            }
                     }
 
                     // Swap into USDC as needed
                     helpers.log('This is where we will swap any non USDC into USDC');
-                    helpers.log('Now we are holding only USDC and have AAVE cleared');
-                        
+                    for (const token of newBalances['wallet']) {
+                        if (token.symbol !== 'USDC'
+                            && token.balanceInt !== null
+                            && token.balanceInt > 0) {
+                                // Swap non-USDC tokens to USDC
+                                const usdcAddress = dhedge.symbolToAddress('USDC', pool.network);
+                                helpers.log('This is where we swap $' + token.balanceUsd + ' worth of ' + token.symbol + ' into USDC');
+                                await dhedge.tradeUniswap(
+                                    pool, 
+                                    token.address, 
+                                    usdcAddress,
+                                    token.balanceInt);
+
+                                // Track updated token balances
+                                newBalances['wallet'] = await dhedge.updateTokenBalance(
+                                    newBalances['wallet'],
+                                    token.address,
+                                    -token.balanceInt,
+                                    pool.network
+                                );
+
+                                /**
+                                 * @TODO Check this math. Conversion may not be correct.
+                                 */
+                                const estimatedSwapInteger = dhedge.decimalToInteger(
+                                    token.balanceDecimal, 
+                                    token.decimals
+                                );
+                                newBalances['wallet'] = await dhedge.updateTokenBalance(
+                                    newBalances['wallet'],
+                                    usdcAddress,
+                                    estimatedSwapInteger,
+                                    pool.network
+                                );
+                        }
+                    }
+
+                    helpers.log('Now we should be holding only USDC and have AAVE cleared');
+                    
                 } else {
                     // If any non-short token debt exists
                     if (startingAaveBalances['variable-debt'].length > 0
                         && startingAaveBalances['variable-debt'][0].symbol !== shortToken) {
-                            // await aave.reduceDebt();
                             helpers.log('This is where we would reduce ' + startingAaveBalances['variable-debt'][0].symbol + ' debt...');
-                        
-                                // Calculate max supply to withdrawl
-                                // Withdrawl max supply
-                                // UniswapV3 into Short token
-                                // Repay AAVE debt
-                                // Repeat
-
-                            // update the startingAaveBalances['supply'] with new numbers after reducing debt
-
-                            for (const token of startingAaveBalances['supply']) {
+                            newBalances = await aave.reduceDebt(pool, startingAaveBalances, startingWalletBalances);
+                            
+                            for (const token of newBalances['aave']['supply']) {
                                 if (token.symbol !== longToken) {
                                     // Withdraw any remaining supply that isn't our long token
                                     helpers.log('This is where we would withdrawl any remaining supply that isn\'t ' + longToken);
+                                    // WITHDRAW SUPPLY TOKENS
+                                    helpers.log('Withdrawing $' + token.balanceUsd + ' worth of ' + token.symbol + ' from AAVE');
+                                    await dhedge.withdrawLentTokens(pool, token.address, token.balanceInt);
+
+                                    // Track the changes to supply balances due to withdraw
+                                    newBalances['wallet'] = await dhedge.updateTokenBalance(
+                                        newBalances['wallet'],
+                                        token.address,
+                                        token.balanceInt,
+                                        pool.network);
+                                    newBalances['aave']['supply'] = await dhedge.updateTokenBalance(
+                                        newBalances['aave']['supply'],
+                                        token.address,
+                                        -token.balanceInt,
+                                        pool.network);
                                 }
                             }
                     }
 
-                    for (const token of startingWalletBalances) {
+                    // Get the token details for the longToken
+                    let longTokenDetails = {};
+                    for (const token of newBalances['wallet']) {
+                        if (token.symbol === longToken) {
+                            longTokenDetails = token;
+                        }
+                    }
+
+                    for (const token of newBalances['wallet']) {
                         // IF WE HAVE TOKENS IN OUR WALLET WITH A BALANCE
                         if (token.balanceUsd > 0) {
                             
@@ -159,14 +230,66 @@ exports = module.exports = functions
                                     + ' into ' + longToken
                                     + ' using Uniswap v3'
                                 );
+                                await dhedge.tradeUniswap(
+                                    pool, 
+                                    token.address, 
+                                    dhedge.symbolToAddress(longToken, pool.network),
+                                    token.balanceInt);
+
+                                // Track updated token balances
+                                newBalances['wallet'] = await dhedge.updateTokenBalance(
+                                    newBalances['wallet'],
+                                    token.address,
+                                    -token.balanceInt,
+                                    pool.network
+                                );
+
+                                let swapDecimals = (token.usdPrice > longTokenDetails.usdPrice) ? 
+                                    token.balanceDecimal * token.usdPrice
+                                     : token.balanceDecimal / longTokenDetails.usdPrice;
+                                const estimatedSwapInteger = dhedge.decimalToInteger(
+                                    swapDecimals, 
+                                    longTokenDetails.decimals
+                                );
+                                newBalances['wallet'] = await dhedge.updateTokenBalance(
+                                    newBalances['wallet'],
+                                    dhedge.symbolToAddress(longToken, pool.network),
+                                    estimatedSwapInteger,
+                                    pool.network
+                                );
+
                             }
 
-                            // Lend Long tokens to AAVE
-                            helpers.log(
-                                'Lend $' + token.balanceUsd
-                                + ' worth of ' + longToken
-                                + ' to AAVE v2'
-                            );
+                            for (const token of newBalances['wallet']) {
+                                if (token.symbol === longToken) {
+                                    // Lend Long tokens to AAVE
+                                    helpers.log(
+                                        'Lend $' + token.balanceUsd
+                                        + ' worth of ' + longToken
+                                        + ' to AAVE v2'
+                                    );
+                                    
+                                    /**
+                                     * @TODO figure out why lending fails after swapping
+                                     */
+                                    await dhedge.lendDeposit(pool, token.address, Math.round(token.balanceInt * 0.99));
+
+                                    // Track updated token balances
+                                    newBalances['wallet'] = await dhedge.updateTokenBalance(
+                                        newBalances['wallet'],
+                                        token.address,
+                                        -token.balanceInt,
+                                        pool.network
+                                    );
+                                    newBalances['aave']['supply'] = await dhedge.updateTokenBalance(
+                                        newBalances['aave']['supply'],
+                                        token.address,
+                                        token.balanceInt,
+                                        pool.network
+                                    );
+                                }
+                            }
+                            
                         }
                     }
 
@@ -189,19 +312,21 @@ exports = module.exports = functions
                         // Lend Long tokens to AAVE
                         // Repeat
 
-                    // aave.reduceDebt(1.3)
                     helpers.log('This is where, if needed, we withdrawl ' + longToken
                         + ' and swap into ' + shortToken + ' and repay debt until we reach our liquidaton health floor');
-                    // WHILE LIQUIDATION HEALTH BELOW TARGET FLOOR (e.g. 1.3)
-                        // Calculate max supply to withdrawl
-                        // Withdrawl max supply
-                        // UniswapV3 into Short token
-                        // Repay AAVE debt
-                        // Repeat
+                    newBalances = await aave.reduceDebt(
+                        pool, 
+                        newBalances['wallet'], 
+                        newBalances['aave'],
+                        aave.liquidationHealthTargetFloor
+                    );
                     
                     helpers.log('Now our wallet is empty and AAVE has maxed leverage'
                         + ' with ' + longToken + ' supplied as collateral for ' + shortToken + ' debt');
                 }
+
+                helpers.log('Here\'s our new balances (estimated):');
+                helpers.log(newBalances);
                 
                 response.status(200).send({ message: 'Rebalance complete!' });
 

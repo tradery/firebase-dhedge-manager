@@ -51,6 +51,16 @@ exports.tokens = {
 //     return null;
 // }
 
+exports.symbolToAddress = (symbol, network = 'polygon') => {
+    const tokens = _this.tokens[network];
+    for (const token in tokens) {
+        if (token.toUpperCase() === symbol.toUpperCase()) {
+            return tokens[token].address;
+        }
+    }
+    return null;
+}
+
 /**
  * Token Address to Token Details
  * 
@@ -78,6 +88,44 @@ exports.addressToTokenDetails = async (address, network = 'polygon') => {
 }
 
 /**
+ * Update Token Balance in Array of Tokens 
+ * 
+ * @param {Array} tokens A list of tokens
+ * @param {String} address A hex address for a token
+ * @param {Number} integerChange Amount to change the token balance
+ * @param {String} network The network to use to lookup the token address, if needed
+ * @returns {Array} The updated list of tokens
+ */
+ exports.updateTokenBalance = async (tokens, address, integerChange, network = 'polygon') => {
+    let newArray = [];
+    let foundIt = false;
+
+    for (const token of tokens) {
+        if (token.address === address) {
+            foundIt = true;
+            const newBn = ethers.BigNumber.from(token.balanceInt + integerChange);
+            const newBalances = _this.getBalanceInfo(newBn, token.decimals, token.usdPrice);
+            newArray.push(Object.assign({}, token, newBalances));
+        } else {
+            newArray.push(token);
+        }
+    }
+
+    if (foundIt === false) {
+        // The token is new
+        const tokenDetails = await _this.addressToTokenDetails(address, network);
+        const tokenBalance = _this.getBalanceInfo(
+            ethers.BigNumber.from(integerChange), 
+            tokenDetails.decimals,
+            tokenDetails.usdPrice
+        );
+        newArray.push(Object.assign(tokenDetails, tokenBalance));
+    }
+
+    return newArray;
+}
+
+/**
  * Initial dHedge Pool
  * 
  * @param {String} mnemonic The mnemonic for the pool trader's wallet.
@@ -98,8 +146,8 @@ exports.initPool = async (mnemonic, poolAddress, network = Network.POLYGON) => {
 
 exports.gasInfo = () => {
     const gas = {
-        gasPrice: ethers.utils.parseUnits('100', 'gwei'),
-        gasLimit: 5000000
+        gasPrice: ethers.utils.parseUnits('500', 'gwei'),
+        gasLimit: 10000000
     }
     return gas;
 }
@@ -120,6 +168,9 @@ exports.getComposition = async (pool) => {
  * @returns {Array} A list of tokens with info and balances
  */
 exports.getPoolBalances = async (pool) => {
+
+    helpers.log(pool.address);
+
     const composition = await _this.getComposition(pool);
     const network = pool.network;
     let assets = [];
@@ -194,16 +245,19 @@ exports.tradeUniswap = async (
         slippageTolerance = 0.5,
         feeTier = 500
     ) => {
-    const tx = await pool.tradeUniswapV3(
-        from,
-        to,
-        amountOfFromToken,
-        feeTier,
-        slippageTolerance,
-        _this.gasInfo()
-    );
+        helpers.log('SWAP WITH UNISWAP V3');
+        helpers.delay();
 
-    return tx;
+        const tx = await pool.tradeUniswapV3(
+            from,
+            to,
+            amountOfFromToken,
+            feeTier,
+            slippageTolerance,
+            _this.gasInfo()
+        );
+        helpers.log(tx);
+        return tx;
 }
 
 exports.trade = async (from, to, amount, dapp = 'SUSHISWAP') => {
@@ -227,11 +281,14 @@ exports.trade = async (from, to, amount, dapp = 'SUSHISWAP') => {
         _this.gasInfo()
     );
 
+    helpers.delay();
     return tx;
 }
 
-exports.lendDeposit = async (token, amount) => {
-    const pool = await _this.initPool();
+exports.lendDeposit = async (pool, token, amount) => {
+    helpers.log('LEND DEPOSIT TO AAVE V2');
+    helpers.delay();
+
     const tx = await pool.lend(
         Dapp.AAVE, 
         token, 
@@ -239,22 +296,28 @@ exports.lendDeposit = async (token, amount) => {
         0,
         _this.gasInfo()
     );
-
+    helpers.log(tx);
     return tx;
 }
 
 exports.withdrawLentTokens = async (pool, token, amount) => {
+    helpers.log('WITHDRAW LENT TOKENS FROM AAVE V2');
+    helpers.delay();
+
     const tx = await pool.withdrawDeposit(
         Dapp.AAVE, 
         token, 
         amount,
         _this.gasInfo()
     );
-
+    helpers.log(tx);
     return tx;
 }
 
 exports.borrowDebt = async (pool, token, amount) => {
+    helpers.log('BORROW TOKENS FROM AAVE V2');
+    helpers.delay();
+
     const tx = await pool.borrow(
         Dapp.AAVE, 
         token, 
@@ -263,17 +326,21 @@ exports.borrowDebt = async (pool, token, amount) => {
         _this.gasInfo()
     );
 
+    helpers.log(tx);
     return tx;
 }
 
 exports.repayDebt = async (pool, token, amount) => {
+    helpers.log('REPAY DEBT ON AAVE V2');
+    helpers.delay();
+
     const tx = await pool.repay(
         Dapp.AAVE, 
         token, 
         amount,
         _this.gasInfo()
     );
-
+    helpers.log(tx);
     return tx;
 }
 
@@ -302,16 +369,15 @@ exports.approveAllSpendingOnce = async (pool, dapps) => {
 
     for (const asset of assets) {
         for (const dapp of dappsToApprove) {
-            helpers.log(
-                'Approving spending of ' + asset.asset
-                + ' on ' + dapp
-            );
-            await pool.approve(
+            helpers.log('Approving spending of ' + asset.asset + ' on ' + dapp);
+
+            const tx = await pool.approve(
                 dapp,
                 asset.asset,
                 ethers.constants.MaxInt256,
                 _this.gasInfo()
             );
+            helpers.log(tx);
         }
     }
 

@@ -1,16 +1,9 @@
-const { ethers } = require("@dhedge/v2-sdk");
 const helpers = require('./helpers');
 const dhedge = require('./dhedge');
 const _this = this;
 
 exports.liquidationHealthTargetFloor = 1.3;
 exports.liquidationHealthTargetCeiling = 1.5;
-
-exports.updateTokenBalances = (token, integerChange) => {
-    const newBn = ethers.BigNumber.from(token.balanceInt + integerChange);
-    const newBalances = dhedge.getBalanceInfo(newBn, token.decimals, token.usdPrice);
-    return Object.assign({}, token, newBalances);
-}
 
 exports.getTargetWithdrawlAmount = (supplyUsd, debtUsd, liquidationThreshold, liquidationHealthTarget) => {
     const debtRatio = debtUsd / supplyUsd;
@@ -27,14 +20,15 @@ exports.getTargetWithdrawlAmount = (supplyUsd, debtUsd, liquidationThreshold, li
  * @param {Object} aaveBalances A clean aave-balances object from Zapper library
  * @param {Object} walletBalances A clean wallet-balances object from dHedge library
  * @param {Float} liquidationHealthTarget The liquidation health target to reach before quitting; Use `null` to empty all debt
- * @returns 
+ * @returns {Object} Updated wallet and aave balances
  */
 exports.reduceDebt = async (pool, aaveBalances, walletBalances, liquidationHealthTarget = null) => {
     // We have no debt
     if (aaveBalances === undefined
-        || aaveBalances === null
+        || aaveBalances['variable-debt'].length === 0
         || aaveBalances.liquidationHealth === null) {
-            return true;
+            helpers.log('Can\'t reduce debt because no debt exists.');
+            return false;
     }
 
     // Set max slippage 
@@ -45,12 +39,21 @@ exports.reduceDebt = async (pool, aaveBalances, walletBalances, liquidationHealt
     const liquidationThreshold = aaveBalances.liquidationThreshold;
 
     // Get our token addresses
+    /**
+     * @TODO Put defence around this so that we don't get the
+     * "Cannot read property '0' of undefined" error when we have no
+     * debt but are trying to rebalance debt.
+     */
     const debtTokenAddress = aaveBalances['variable-debt'][0].address;
     
     // Setup our current values
-    let remainingDebtToRepayUsd = currentDebtUsd = aaveBalances.debtBalanceUsd;
+    let remainingDebtToRepayUsd = currentDebtUsd = aaveBalances.debtBalanceUsd * 1.03;
     let currentSupplyUsd = aaveBalances.supplyBalanceUsd;
     let currentHealth = aaveBalances.liquidationHealth;
+    let updatedBalances = {
+        'wallet': walletBalances,
+        'aave':   aaveBalances
+    };
 
     // Do we have enough in our wallet to pay down the debt?
     for (const token of walletBalances) {
@@ -78,12 +81,24 @@ exports.reduceDebt = async (pool, aaveBalances, walletBalances, liquidationHealt
             );
 
             // REPAY DEBT FROM WALLET
-            helpers.log('Repaying $' + debtToRepayUsdFromWallet + ' worth of ' + token.symbol + ' on AAVE');
+            helpers.log('Repaying $' + debtToRepayUsdFromWallet + ' worth of ' + token.symbol + ' on AAVE from wallet');
             await dhedge.repayDebt(pool, debtTokenAddress, debtToRepayInteger);
+
+            // Track the changes to wallet and debt balances due to debt repayment
+            updatedBalances['wallet'] = await dhedge.updateTokenBalance(
+                updatedBalances['wallet'], 
+                debtTokenAddress, 
+                -debtToRepayInteger,
+                pool.network);
+            updatedBalances['aave']['variable-debt'] = await dhedge.updateTokenBalance(
+                updatedBalances['aave']['variable-debt'],
+                debtTokenAddress,
+                -debtToRepayInteger,
+                pool.network);
 
             // EXIT OR RECALCULATE REMAINING DEBT TO REPAY
             if (remainingDebtToRepayUsd === debtToRepayUsdFromWallet) {
-                return true;
+                return updatedBalances;
             } else {
                 currentDebtUsd -= debtToRepayUsdFromWallet;
                 currentHealth = liquidationThreshold / (currentDebtUsd / currentSupplyUsd);
@@ -98,7 +113,7 @@ exports.reduceDebt = async (pool, aaveBalances, walletBalances, liquidationHealt
         // is already above the specified liquidation health target
         if (liquidationHealthTarget !== null
             && currentHealth > liquidationHealthTarget) {
-                return true;
+                return updatedBalances;
         }
 
         if (liquidationHealthTarget !== null) {
@@ -139,6 +154,18 @@ exports.reduceDebt = async (pool, aaveBalances, walletBalances, liquidationHealt
             helpers.log('Withdrawing $' + debtToRepayThisSubLoopUsd + ' worth of ' + token.symbol + ' from AAVE');
             await dhedge.withdrawLentTokens(pool, token.address, debtToRepayInteger);
 
+            // Track the changes to supply balances due to withdraw
+            updatedBalances['wallet'] = await dhedge.updateTokenBalance(
+                updatedBalances['wallet'],
+                token.address,
+                debtToRepayInteger,
+                pool.network);
+            updatedBalances['aave']['supply'] = await dhedge.updateTokenBalance(
+                updatedBalances['aave']['supply'],
+                token.address,
+                -debtToRepayInteger,
+                pool.network);
+
             // SWAP TO DEBT TOKENS
             helpers.log(
                 'Swapping ~$' + (maxSlippageMultiplier * debtToRepayThisSubLoopUsd)
@@ -147,16 +174,40 @@ exports.reduceDebt = async (pool, aaveBalances, walletBalances, liquidationHealt
             const slippage = ((1 - maxSlippageMultiplier) * 100) / 2;
             await dhedge.tradeUniswap(pool, token.address, debtTokenAddress, debtToRepayInteger, slippage);
 
-
-            // REPAY DEBT
             const estimatedSwapInteger = dhedge.decimalToInteger(
                 maxSlippageMultiplier * (debtToRepayThisSubLoopUsd / aaveBalances['variable-debt'][0].usdPrice), 
                 aaveBalances['variable-debt'][0].decimals
             );
+
+            // Track the changes to supply balances due to swap
+            updatedBalances['wallet'] = await dhedge.updateTokenBalance(
+                updatedBalances['wallet'],
+                token.address,
+                -debtToRepayInteger,
+                pool.network);
+            updatedBalances['wallet'] = await dhedge.updateTokenBalance(
+                updatedBalances['wallet'],
+                debtTokenAddress,
+                estimatedSwapInteger,
+                pool.network);
+
+            // REPAY DEBT
             helpers.log(
                 'Repaying ~$' + (maxSlippageMultiplier * debtToRepayThisSubLoopUsd)
                  + ' worth of ' + aaveBalances['variable-debt'][0].symbol + ' on AAVE');
             await dhedge.repayDebt(pool, debtTokenAddress, estimatedSwapInteger);
+
+            // Track the changes to wallet and debt balances due to debt repayment
+            updatedBalances['wallet'] = await dhedge.updateTokenBalance(
+                updatedBalances['wallet'], 
+                debtTokenAddress, 
+                -debtToRepayInteger,
+                pool.network);
+            updatedBalances['aave']['variable-debt'] = await dhedge.updateTokenBalance(
+                updatedBalances['aave']['variable-debt'],
+                debtTokenAddress,
+                -debtToRepayInteger,
+                pool.network);
 
             // RECALCULATE
             // current supply, debt, health, and remaining debt to repay
@@ -182,9 +233,5 @@ exports.reduceDebt = async (pool, aaveBalances, walletBalances, liquidationHealt
         }
     } while (remainingDebtToRepayUsd > 0);
 
-    /**
-     * @TODO withdraw remaining supply from AAVE
-     */
-    
-    return true;
+    return updatedBalances;
 }

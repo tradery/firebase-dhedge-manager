@@ -49,15 +49,18 @@ const basepath = 'https://api.zapper.fi/v2/';
  * @returns {Object} A clean list of relevant data
  */
 exports.cleanAaveBalances = (assets) => {
+    let response = {
+        'supply': [],
+        'variable-debt': []
+    };
+    
     if (assets.length === 0) {
-        return null;
+        return response;
     }
 
-    let response = {};
     let supplyBalanceUsd = debtBalanceUsd = supplyLiquidationThreshold = 0;
     for (const asset of assets) {
         const groupId = asset.groupId;
-        response[groupId] = (response[groupId] === undefined) ? [] : response[groupId];
         response[groupId].push({
             'symbol': asset.tokens[0].symbol, 
             'address': asset.tokens[0].address,

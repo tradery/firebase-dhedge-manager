@@ -52,10 +52,6 @@ exports = module.exports = functions
                 if (secret === undefined || secret === '')
                     throw new Error("A `secret` must be set.");
 
-                /**
-                 * @TODO Support rebalancing from scheduled task
-                 */
-
                 // Return an error if needed
                 if (longToken === undefined || longToken === '')
                     throw new Error("A `longToken` must be set.");
@@ -71,7 +67,6 @@ exports = module.exports = functions
                 const portfoliosRef = db.collection('portfolios');
                 const portfolioRef = portfoliosRef.doc(secret);
                 const portfolioDoc = await portfolioRef.get();
-                const signalsRef = portfolioRef.collection('signals');
                 
                 // Make sure we have a valid portfolio
                 if (portfolioDoc.data() === undefined)
@@ -104,11 +99,12 @@ exports = module.exports = functions
                 if (shortToken === 'ETH') shortToken = 'WETH';
 
                 // Get the value of the last saved signal
+                const signalsRef = portfolioRef.collection('signals');
                 const signalsSnapshot = await signalsRef.orderBy('createdAt', 'desc').limit(1).get();
                 const lastSignal = helpers.snapshotToArray(signalsSnapshot)[0].data;
 
                 // Check to see if our signals have changed
-                if (lastSignal.long === longToken && lastSignal.short === shortToken) {
+                if (false) { //lastSignal.long === longToken && lastSignal.short === shortToken) {
                     // Signals have not changed since the last time they were sent
                     response.status(200).send({ message: 'Signal received. It has not changed.' });
                 } else {
