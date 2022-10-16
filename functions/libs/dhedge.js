@@ -1,6 +1,7 @@
 const { Dhedge, Dapp, Network, ethers } = require("@dhedge/v2-sdk");
 const helpers = require('./helpers');
 const coinmarketcap = require('./coinmarketcap');
+const zapper = require("./zapper");
 const _this = this;
 
 exports.tokens = {
@@ -14,7 +15,6 @@ exports.tokens = {
             address:  '0x1bfd67037b42cf73acf2047067bd4f2c47d9bfd6',
             decimals: 8,
             coinMarketCapId: 1,
-    
         },
         WETH: {
             address:  '0x7ceb23fd6bc0add59e62ac25578270cff1b9f619',
@@ -33,6 +33,32 @@ exports.tokens = {
         },
     }
 };
+
+ exports.gasInfo = {
+    gasPrice: ethers.utils.parseUnits('500', 'gwei'),
+    gasLimit: 10000000
+};
+
+/**
+ * Initial dHedge Pool
+ * 
+ * @param {String} mnemonic The mnemonic for the pool trader's wallet.
+ * @param {String} poolAddress The address of a dhedge pool contract.
+ * @param {String} network The blockchain network for this pool contract.
+ * @returns {Object} a dhedge pool.
+ */
+ exports.initPool = async (mnemonic, poolAddress, network = Network.POLYGON) => {
+    // Initialize our wallet
+    const provider = new ethers.providers.JsonRpcProvider(process.env.PROVIDER);
+    const wallet = new ethers.Wallet.fromMnemonic(mnemonic);
+    const walletWithProvider = wallet.connect(provider);
+    
+    // Initialize dHedge v2 API
+    const dhedge = new Dhedge(walletWithProvider, network);
+    return await dhedge.loadPool(poolAddress);
+}
+
+
 
 // /**
 //  * Address to Token Symbol
@@ -125,32 +151,7 @@ exports.addressToTokenDetails = async (address, network = 'polygon') => {
     return newArray;
 }
 
-/**
- * Initial dHedge Pool
- * 
- * @param {String} mnemonic The mnemonic for the pool trader's wallet.
- * @param {String} poolAddress The address of a dhedge pool contract.
- * @param {String} network The blockchain network for this pool contract.
- * @returns {Object} a dhedge pool.
- */
-exports.initPool = async (mnemonic, poolAddress, network = Network.POLYGON) => {
-    // Initialize our wallet
-    const provider = new ethers.providers.JsonRpcProvider(process.env.PROVIDER);
-    const wallet = new ethers.Wallet.fromMnemonic(mnemonic);
-    const walletWithProvider = wallet.connect(provider);
-    
-    // Initialize dHedge v2 API
-    const dhedge = new Dhedge(walletWithProvider, network);
-    return await dhedge.loadPool(poolAddress);
-}
 
-exports.gasInfo = () => {
-    const gas = {
-        gasPrice: ethers.utils.parseUnits('500', 'gwei'),
-        gasLimit: 10000000
-    }
-    return gas;
-}
 
 /**
  * 
@@ -254,7 +255,7 @@ exports.tradeUniswap = async (
             amountOfFromToken,
             feeTier,
             slippageTolerance,
-            _this.gasInfo()
+            _this.gasInfo
         );
         helpers.log(tx);
         return tx;
@@ -278,7 +279,7 @@ exports.trade = async (from, to, amount, dapp = 'SUSHISWAP') => {
         to,
         amount,
         slippageTolerance,
-        _this.gasInfo()
+        _this.gasInfo
     );
 
     helpers.delay();
@@ -294,7 +295,7 @@ exports.lendDeposit = async (pool, token, amount) => {
         token, 
         amount,
         0,
-        _this.gasInfo()
+        _this.gasInfo
     );
     helpers.log(tx);
     return tx;
@@ -308,7 +309,7 @@ exports.withdrawLentTokens = async (pool, token, amount) => {
         Dapp.AAVE, 
         token, 
         amount,
-        _this.gasInfo()
+        _this.gasInfo
     );
     helpers.log(tx);
     return tx;
@@ -323,7 +324,7 @@ exports.borrowDebt = async (pool, token, amount) => {
         token, 
         amount,
         0,
-        _this.gasInfo()
+        _this.gasInfo
     );
 
     helpers.log(tx);
@@ -338,7 +339,7 @@ exports.repayDebt = async (pool, token, amount) => {
         Dapp.AAVE, 
         token, 
         amount,
-        _this.gasInfo()
+        _this.gasInfo
     );
     helpers.log(tx);
     return tx;
@@ -375,7 +376,7 @@ exports.approveAllSpendingOnce = async (pool, dapps) => {
                 dapp,
                 asset.asset,
                 ethers.constants.MaxInt256,
-                _this.gasInfo()
+                _this.gasInfo
             );
             helpers.log(tx);
         }
