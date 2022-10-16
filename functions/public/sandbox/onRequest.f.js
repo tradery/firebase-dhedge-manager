@@ -44,9 +44,9 @@ exports = module.exports = functions
                 // Authorized!
 
                 // await btcSuperYield.long();
-                const aaveBalances = await zapper.aaveBalances(process.env.POOL_ADDRESS);
-                // helpers.log(aaveBalances);
-                helpers.log(zapper.cleanAaveBalances(aaveBalances));
+                // const aaveBalances = await zapper.aaveBalances(process.env.POOL_ADDRESS);
+                // // helpers.log(aaveBalances);
+                // helpers.log(zapper.cleanAaveBalances(aaveBalances));
 
                 // Get the data from the request
                 // const { 
@@ -54,12 +54,71 @@ exports = module.exports = functions
                 // } = request.body;
                 // await dhedge.addMember(memberAddress);
                 
-                // const pool = await dhedge.initPool(
-                //     process.env.MNEMONIC,
-                //     process.env.POOL_ADDRESS,
-                //     'polygon'
+                const pool = await dhedge.initPool(
+                    process.env.MNEMONIC,
+                    process.env.POOL_ADDRESS,
+                    'polygon'
+                );
+                let tokens = await dhedge.getBalances(pool);
+                helpers.log(tokens);
+                
+                // tokens = await dhedge.withdrawLentTokens(
+                //     pool, 
+                //     tokens, 
+                //     tokens['aave']['supply']['USDC'].address,
+                //     1000000,
                 // );
-                // helpers.log(await dhedge.getPoolBalances(pool));
+                // helpers.log(tokens);
+                // // expect usdc in wallet
+
+                // tokens = await dhedge.tradeUniswap(
+                //     pool, 
+                //     tokens, 
+                //     tokens['wallet']['USDC'].address,
+                //     dhedge.symbolToAddress('WBTC'),
+                //     tokens['wallet']['USDC'].balanceInt,
+                // );
+                // helpers.log(tokens);
+                // // expect no usdc in wallet; some wbtc in wallet
+
+                // tokens = await dhedge.repayDebt(
+                //     pool, 
+                //     tokens, 
+                //     tokens['aave']['variable-debt']['WBTC'].address, 
+                //     tokens['aave']['variable-debt']['WBTC'].balanceInt,
+                // );
+                // helpers.log(tokens);
+                // // Expect no debt; some wbtc in wallet
+                
+                // tokens = await dhedge.withdrawLentTokens(
+                //     pool, 
+                //     tokens, 
+                //     tokens['aave']['supply']['USDC'].address,
+                //     tokens['aave']['supply']['USDC'].balanceInt,
+                // );
+                // helpers.log(tokens);
+                // // expect usdc in wallet
+
+
+                // tokens = await dhedge.lendDeposit(
+                //     pool, 
+                //     tokens, 
+                //     tokens['wallet']['WBTC'].address, 
+                //     tokens['wallet']['WBTC'].balanceInt,
+                // );
+                // helpers.log(tokens);
+                // // expect supply wbtc to go up; no wbtc in wallet
+
+                // tokens = await dhedge.borrowDebt(
+                //     pool, 
+                //     tokens, 
+                //     dhedge.symbolToAddress('USDC'), 
+                //     tokens['aave']['supply']['WBTC'].balanceInt * tokens['aave']['supply']['WBTC'].liquidationThreshold * .9,
+                // );
+                // helpers.log(tokens);
+                // expect debt; wbtc in wallet
+
+
 
                 // const tx1 = await dhedge.borrowDebt(pool, dhedge.tokens.polygon.USDC.address, '2000000');
                 // const tx2 = await dhedge.repayDebt(pool, dhedge.tokens.polygon.USDC.address, '5000000');

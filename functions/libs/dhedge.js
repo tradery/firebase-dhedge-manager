@@ -1,4 +1,4 @@
-const { Dhedge, Dapp, Network, ethers } = require("@dhedge/v2-sdk");
+const { Dhedge, Dapp, Network, ethers, Pool } = require("@dhedge/v2-sdk");
 const helpers = require('./helpers');
 const coinmarketcap = require('./coinmarketcap');
 const zapper = require("./zapper");
@@ -34,10 +34,12 @@ exports.tokens = {
     }
 };
 
- exports.gasInfo = {
+exports.gasInfo = {
     gasPrice: ethers.utils.parseUnits('500', 'gwei'),
     gasLimit: 10000000
 };
+
+exports.swapSlippageTolerance = 0.5;
 
 /**
  * Initial dHedge Pool
@@ -45,9 +47,9 @@ exports.tokens = {
  * @param {String} mnemonic The mnemonic for the pool trader's wallet.
  * @param {String} poolAddress The address of a dhedge pool contract.
  * @param {String} network The blockchain network for this pool contract.
- * @returns {Object} a dhedge pool.
+ * @returns {Promise<Pool>} a dhedge pool.
  */
- exports.initPool = async (mnemonic, poolAddress, network = Network.POLYGON) => {
+exports.initPool = async (mnemonic, poolAddress, network = Network.POLYGON) => {
     // Initialize our wallet
     const provider = new ethers.providers.JsonRpcProvider(process.env.PROVIDER);
     const wallet = new ethers.Wallet.fromMnemonic(mnemonic);
@@ -58,33 +60,55 @@ exports.tokens = {
     return await dhedge.loadPool(poolAddress);
 }
 
+/**
+ * Get Pool & AAVE Balances
+ * 
+ * @param {Pool} pool a dHedge Pool object
+ * @returns {Promise<Object>} A list of tokens with info and balances
+ */
+exports.getBalances = async (pool) => {
+    const composition = await pool.getComposition();
 
+    let assets = {
+        'wallet': {},
+        'aave': {
+            'supply': {},
+            'variable-debt': {},
+        },
+    };
 
-// /**
-//  * Address to Token Symbol
-//  * 
-//  * @param {String} address a token contract address
-//  * @param {String} network a blockchain network
-//  * @returns {String} a token symbol
-//  */
-// exports.addressToSymbol = (address, network = 'polygon') => {
-//     const tokens = _this.tokens[network];
-//     for (const token in tokens) {
-//         if (tokens[token].address.toLowerCase() === address.toLowerCase()) {
-//             return token;
-//         }
-//     }
-//     return null;
-// }
-
-exports.symbolToAddress = (symbol, network = 'polygon') => {
-    const tokens = _this.tokens[network];
-    for (const token in tokens) {
-        if (token.toUpperCase() === symbol.toUpperCase()) {
-            return tokens[token].address;
+    // GET WALLET BALANCES FROM THE POOL
+    for (const asset of composition) {
+        const token = await _this.createNewToken(asset.asset, asset.balance, pool.network);
+        
+        // Ignore tokens like AAVEV2
+        if (token.decimals !== null) {
+            assets['wallet'][token.symbol] = token;
         }
     }
-    return null;
+
+    // GET AAVE BALANCES FROM ZAPPER
+    assets['aave'] = zapper.cleanAaveBalances(await zapper.aaveBalances(pool.address));
+    
+    return assets;
+}
+
+/**
+ * Create New Token
+ * 
+ * @param {String} address A token address that maps to this.tokens
+ * @param {Number} balance A balance amount in a format compatible with ethers.BigNumber
+ * @param {String} network A blockchain network that we're mapping tokens to
+ * @returns {Promise<Object>} A token object with lots of details
+ */
+exports.createNewToken = async (address, balance = 0, network = 'polygon') => {
+    const tokenDetails = await _this.addressToTokenDetails(address, network);
+    const tokenBalance = _this.getBalanceInfo(
+        balance, 
+        tokenDetails.decimals,
+        tokenDetails.usdPrice
+    );
+    return Object.assign(tokenDetails, tokenBalance);
 }
 
 /**
@@ -92,7 +116,7 @@ exports.symbolToAddress = (symbol, network = 'polygon') => {
  * 
  * @param {String} address a token contract address
  * @param {String} network a blockchain network
- * @returns {Object} a list of useful information about a token
+ * @returns {Promise<Object>} a list of useful information about a token
  */
 exports.addressToTokenDetails = async (address, network = 'polygon') => {
     const tokens = _this.tokens[network];
@@ -110,121 +134,29 @@ exports.addressToTokenDetails = async (address, network = 'polygon') => {
             };
         }
     }
-    return null;
+    throw new Error('Token address (' + address + ') not found for ' + network);
 }
-
-/**
- * Update Token Balance in Array of Tokens 
- * 
- * @param {Array} tokens A list of tokens
- * @param {String} address A hex address for a token
- * @param {Number} integerChange Amount to change the token balance
- * @param {String} network The network to use to lookup the token address, if needed
- * @returns {Array} The updated list of tokens
- */
- exports.updateTokenBalance = async (tokens, address, integerChange, network = 'polygon') => {
-    let newArray = [];
-    let foundIt = false;
-
-    for (const token of tokens) {
-        if (token.address === address) {
-            foundIt = true;
-            const newBn = ethers.BigNumber.from(token.balanceInt + integerChange);
-            const newBalances = _this.getBalanceInfo(newBn, token.decimals, token.usdPrice);
-            newArray.push(Object.assign({}, token, newBalances));
-        } else {
-            newArray.push(token);
-        }
-    }
-
-    if (foundIt === false) {
-        // The token is new
-        const tokenDetails = await _this.addressToTokenDetails(address, network);
-        const tokenBalance = _this.getBalanceInfo(
-            ethers.BigNumber.from(integerChange), 
-            tokenDetails.decimals,
-            tokenDetails.usdPrice
-        );
-        newArray.push(Object.assign(tokenDetails, tokenBalance));
-    }
-
-    return newArray;
-}
-
-
-
-/**
- * 
- * @param {Pool} pool a dHedge Pool object
- * @returns {Array} A list of assets approved for trading
- */
-exports.getComposition = async (pool) => {
-    return await pool.getComposition();
-};
-
-/**
- * Get Pool Balances
- * 
- * @param {Pool} pool a dHedge Pool object
- * @returns {Array} A list of tokens with info and balances
- */
-exports.getPoolBalances = async (pool) => {
-
-    helpers.log(pool.address);
-
-    const composition = await _this.getComposition(pool);
-    const network = pool.network;
-    let assets = [];
-    for (const asset of composition) {
-        const tokenDetails = await _this.addressToTokenDetails(asset.asset, network);
-        const tokenBalance = _this.getBalanceInfo(
-            ethers.BigNumber.from(asset.balance), 
-            tokenDetails.decimals,
-            tokenDetails.usdPrice
-        );
-        assets.push(Object.assign(tokenDetails, tokenBalance));
-    }
-    return assets;
-}
-
-// /**
-//  * Get Balance of a Token
-//  * 
-//  * @param {Array} assets An array returned from pool.getComposition()
-//  * @param {String} token A token's contract address
-//  * @returns {BigNumber} A token balance in hexidecimal format
-//  */
-// exports.getBalance = (assets, token) => {
-//     for (const asset of assets) {
-//         if (asset.asset.toLowerCase() === token.toLowerCase()) {
-//             return ethers.BigNumber.from(asset.balance);
-//         }
-//     }
-
-//     throw new Error('Could not find the specified asset (' + token + ') in the pool.');
-// }
 
 /**
  * Get Balance Info for a Token
  * 
- * @param {BigNumber} amountBN Amount in ethers.BigNumber format
+ * @param {Number} amount Amount before conversion to ethers.BigNumber format
  * @param {Integer} decimals Number of decimal places to consider
  * @param {Float} tokenPriceUsd The USD price of a token to convert the big number
  * @returns {Object} A list of balances in different formats
  */
-exports.getBalanceInfo = (amountBN, decimals, tokenPriceUsd) => {
-    const balanceDecimal = ethers.utils.formatUnits(amountBN, decimals);
+exports.getBalanceInfo = (amount, decimals, tokenPriceUsd) => {
+    const amountBn = ethers.BigNumber.from(amount);
+    const balanceDecimal = parseFloat(ethers.utils.formatUnits(amountBn, decimals));
     const balanceInt = _this.decimalToInteger(balanceDecimal, decimals);
     const balanceUsd = tokenPriceUsd * balanceDecimal;
     return {
-        balanceBn: amountBN,
+        balanceBn: amountBn,
         balanceDecimal: balanceDecimal,
         balanceInt: balanceInt,
         balanceUsd: balanceUsd
     }
 }
-
-
 
 /**
  * Decial to Integer
@@ -238,111 +170,392 @@ exports.decimalToInteger = (amount, decimals) => {
     return isFinite(response) ? response : null;
 }
 
+/**
+ * Update Balances
+ * 
+ * @param {Object} tokens An object with wallet and aave tokens
+ * @param {String} instruction lend, borrow, repay, withdraw, swap
+ * @param {Integer} changeInAmount The amount to change the tokens by. Must be ethers.BigNumber friendly
+ * @param {String} addressFrom A token address, the main subject of the instruction
+ * @param {String} addressTo A token address, the other actor in the instruction, if needed. Defaults to `null`.
+ * @param {String} network A blockchain network to map token addresses to. Defaults to `'polygon'`
+ * @param {Float} slippagePadding The amount of slippage we should assume for swaps, as a percentage, Defaults to `1.0`
+ * @returns {Promise<Object>} An object with wallet and aave tokens that have updated balances
+ */
+exports.updateBalances = async (
+    tokens, 
+    instruction, 
+    changeInAmount, 
+    addressFrom, 
+    addressTo = null, 
+    network = 'polygon', 
+    slippagePadding = 0.5) => {
+        const symbolFrom = _this.addressToSymbol(addressFrom);
+        const symbolTo   = (addressTo !== null) ? _this.addressToSymbol(addressTo) : symbolFrom;
+        const expectedSlippage = (100 - slippagePadding) / 100;
+        let startFromZero = false;
+        
+        switch(instruction) {
+            case 'lend':
+                // Make sure we have tokens in the wallet
+                if (tokens['wallet'][symbolFrom] === undefined) {
+                    throw new Error('Cannot lend ' + symbolFrom + ' tokens because they do not exist in wallet.');
+                }
+
+                // Subtract the lent amount from our wallet
+                tokens['wallet'][symbolFrom] = _this.updateTokenBalance(
+                    tokens['wallet'][symbolFrom],
+                    -changeInAmount
+                );
+
+                // Set a token object in the aave supply if not already set
+                if (tokens['aave']['supply'][symbolTo] === undefined) {
+                    tokens['aave']['supply'][symbolTo] = tokens['wallet'][symbolFrom];
+                    startFromZero = true;  
+                }
+
+                // Add the lent amount to the aave supply
+                tokens['aave']['supply'][symbolTo] = _this.updateTokenBalance(
+                    tokens['aave']['supply'][symbolTo],
+                    changeInAmount,
+                    startFromZero
+                );
+                break;
+            case 'borrow':
+                // Set a token object in our wallet if not already set
+                if (tokens['wallet'][symbolFrom] === undefined) {
+                    tokens['wallet'][symbolFrom] = await _this.createNewToken(addressFrom, 0, network);
+                }
+                
+                // Set a token object in the aave debt if not already set
+                if (tokens['aave']['variable-debt'][symbolTo] === undefined) {
+                    tokens['aave']['variable-debt'][symbolTo] = await _this.createNewToken(addressFrom, 0, network);
+                }
+
+                // Add the borrowed amount to our wallet
+                tokens['wallet'][symbolFrom] = _this.updateTokenBalance(
+                    tokens['wallet'][symbolFrom],
+                    changeInAmount
+                );
+
+                // Add the borrowed amount to the aave debt
+                tokens['aave']['variable-debt'][symbolFrom] = _this.updateTokenBalance(
+                    tokens['aave']['variable-debt'][symbolFrom],
+                    changeInAmount
+                );
+                break;
+            case 'repay':
+                // Make sure we have tokens in the wallet and debt
+                if (tokens['wallet'][symbolFrom] === undefined) {
+                    throw new Error('Cannot repay ' + symbolFrom + ' tokens because they do not exist in wallet.');
+                }
+                if (tokens['aave']['variable-debt'][symbolTo] === undefined) {
+                    throw new Error('Cannot repay ' + symbolTo + ' tokens because we do not have that kind of debt.');
+                }
+
+                // Subtract the repaid amount from our wallet
+                tokens['wallet'][symbolFrom] = _this.updateTokenBalance(
+                    tokens['wallet'][symbolFrom],
+                    -changeInAmount
+                );
+
+                // Subtract the repaid amount from our aave debt
+                tokens['aave']['variable-debt'][symbolTo] = _this.updateTokenBalance(
+                    tokens['wallet'][symbolTo],
+                    -changeInAmount
+                );
+                break;
+            case 'withdraw':
+                // Make sure we have tokens in the supply
+                if (tokens['aave']['supply'][symbolFrom] === undefined) {
+                    throw new Error('Cannot withdraw ' + symbolFrom + ' tokens that do not exist in AAVE supply.');
+                }
+
+                // Subtrack the withdrawed amount from the aave supply
+                tokens['aave']['supply'][symbolFrom] = _this.updateTokenBalance(
+                    tokens['aave']['supply'][symbolFrom],
+                    -changeInAmount
+                );
+
+                // Set a token object in our wallet if not already set
+                if (tokens['wallet'][symbolTo] === undefined) {
+                    tokens['wallet'][symbolTo] = await _this.createNewToken(addressFrom, 0, network);
+                    startFromZero = true;  
+                }
+
+                // Add the withdrawed amount to our wallet
+                tokens['wallet'][symbolTo] = _this.updateTokenBalance(
+                    tokens['wallet'][symbolTo],
+                    changeInAmount,
+                    startFromZero
+                );
+                
+                break;
+            case 'swap':
+                // Make sure we have tokens in the wallet
+                if (tokens['wallet'][symbolFrom] === undefined) {
+                    throw new Error('Cannot swap from ' + symbolFrom + ' tokens because they do not exist in wallet.');
+                }
+
+                // Set a token object in our wallet if not already set
+                if (tokens['wallet'][symbolTo] === undefined) {
+                    if (addressTo === null) {
+                        throw new Error('A TO address must be set so we know what we\'re swapping into');
+                    }
+                    tokens['wallet'][symbolTo] = await _this.createNewToken(addressTo, 0, network);
+                    startFromZero = true;
+                }
+
+                // Calculate the amount of tokens we expect to have in the TO token
+                const newUsdBalance = (expectedSlippage * tokens['wallet'][symbolFrom].balanceUsd) + tokens['wallet'][symbolTo].balanceUsd;
+                const newBalanceDecimal = newUsdBalance / tokens['wallet'][symbolTo].usdPrice;
+                const changeInAmountTo = _this.decimalToInteger(newBalanceDecimal, tokens['wallet'][symbolTo].decimals);
+
+                // Add the swapped amount to our wallet
+                tokens['wallet'][symbolTo] = _this.updateTokenBalance(
+                    tokens['wallet'][symbolTo],
+                    changeInAmountTo,
+                    startFromZero
+                );
+
+                // Subtract the swapped amount from our wallet
+                tokens['wallet'][symbolFrom] = _this.updateTokenBalance(
+                    tokens['wallet'][symbolFrom],
+                    -changeInAmount
+                );
+                break;
+            default:
+                return tokens;
+        }
+
+        // RECALCULATE SUPPLY & DEBT BALANCES, LIQUIDATION THRESHOLD AND HEALTH
+        let supplyBalanceUsd = debtBalanceUsd = supplyLiquidationThreshold = 0;
+        for (const tokenSymbol in tokens['aave']['supply']) {
+            const token = tokens['aave']['supply'][tokenSymbol];
+            supplyBalanceUsd += token.balanceUsd;
+        }
+        for (const tokenSymbol in tokens['aave']['variable-debt']) {
+            const token = tokens['aave']['variable-debt'][tokenSymbol];
+            debtBalanceUsd += token.balanceUsd;
+        }
+        for (const tokenSymbol in tokens['aave']['supply']) {
+            const token = tokens['aave']['supply'][tokenSymbol];
+            supplyLiquidationThreshold += (token.balanceUsd / supplyBalanceUsd) * token.liquidationThreshold;
+        }
+        tokens['aave']['liquidationThreshold'] = (isFinite(supplyLiquidationThreshold)) ? supplyLiquidationThreshold : 0;
+        tokens['aave']['supplyBalanceUsd'] = supplyBalanceUsd;
+        tokens['aave']['debtBalanceUsd'] = debtBalanceUsd;
+        
+        // And the liquidation health
+        const liquidationHealth = supplyLiquidationThreshold / (debtBalanceUsd / supplyBalanceUsd);
+        tokens['aave']['liquidationHealth'] = (isFinite(liquidationHealth)) ? liquidationHealth : null;
+
+        // REMOVE ANY OBJECTS WITH A ZERO BALANCE
+        for (const tokenSymbol in tokens['wallet']) {
+            if (tokens['wallet'][tokenSymbol].balanceInt <= 0) {
+                delete tokens['wallet'][tokenSymbol];
+            }
+        }
+        for (const tokenSymbol in tokens['aave']['variable-debt']) {
+            if (tokens['aave']['variable-debt'][tokenSymbol].balanceInt <= 0) {
+                delete tokens['aave']['variable-debt'][tokenSymbol];
+            }
+        }
+        for (const tokenSymbol in tokens['aave']['supply']) {
+            if (tokens['aave']['supply'][tokenSymbol].balanceInt <= 0) {
+                delete tokens['aave']['supply'][tokenSymbol];
+            }
+        }
+
+        return tokens;
+}
+
+/**
+ * Address to Token Symbol
+ * 
+ * @param {String} address a token contract address
+ * @param {String} network a blockchain network. Defaults to `'polygon'`.
+ * @returns {String} a token symbol
+ */
+exports.addressToSymbol = (address, network = 'polygon') => {
+    const tokens = _this.tokens[network];
+    for (const token in tokens) {
+        if (tokens[token].address.toLowerCase() === address.toLowerCase()) {
+            return token;
+        }
+    }
+    throw new Error('Token address (' + address + ') not found for ' + network);
+}
+
+/**
+ * Token Symbol to Address
+ * 
+ * @param {String} address a token symbol
+ * @param {String} network a blockchain network. Defaults to `'polygon'`.
+ * @returns {String} a token contract address
+ */
+exports.symbolToAddress = (symbol, network = 'polygon') => {
+    const tokens = _this.tokens[network];
+    for (const token in tokens) {
+        if (token.toUpperCase() === symbol.toUpperCase()) {
+            return tokens[token].address;
+        }
+    }
+    return null;
+}
+
+/**
+ * Update Token Balance
+ * 
+ * @param {Object} token A token object with lots of info
+ * @param {Number} integerChange The amount to change the token balance
+ * @param {Boolean} startFromZero Do we reset the token balance at zero?
+ * @returns {Object} The token object with updated balance info
+ */
+exports.updateTokenBalance = (token, integerChange, startFromZero = false) => {
+    if (startFromZero === true) {
+        token = Object.assign({}, token, _this.getBalanceInfo(0, token.decimals, token.usdPrice));
+    }
+
+    // Consider an edge condition, such as overpaying a debt balance
+    const newAmount = ((token.balanceInt + integerChange) > 0) ? token.balanceInt + integerChange : 0;
+    const newBalances = _this.getBalanceInfo(newAmount, token.decimals, token.usdPrice);
+    return Object.assign(token, newBalances);
+}
+
+/**
+ * Trade on Uniswap
+ * 
+ * @param {Pool} pool A dHedge pool object
+ * @param {Object} tokens An object with wallet and aave token balances
+ * @param {String} addressFrom The token contract address we're swapping from
+ * @param {String} addressTo The token contract address we're swapping to
+ * @param {Number} amountOfFromToken Amount of fromToken to swap, in format compatible with ethers.BigNumber
+ * @param {Float} slippageTolerance Percentage of slippage to accept in trades. Defaults to `0.5`.
+ * @param {Number} feeTier 100, 500, 3000, , or 10000. Defaults to `500`.
+ * @returns {Promise<Object>} An object with updated wallet and aave token balances
+ */
 exports.tradeUniswap = async (
         pool,
-        from, 
-        to, 
+        tokens,
+        addressFrom, 
+        addressTo, 
         amountOfFromToken, 
         slippageTolerance = 0.5,
         feeTier = 500
     ) => {
         helpers.log('SWAP WITH UNISWAP V3');
-        helpers.delay();
+        helpers.delay(1);
 
         const tx = await pool.tradeUniswapV3(
-            from,
-            to,
-            amountOfFromToken,
+            addressFrom,
+            addressTo,
+            Math.round(amountOfFromToken),
             feeTier,
             slippageTolerance,
             _this.gasInfo
         );
         helpers.log(tx);
-        return tx;
+
+        return await _this.updateBalances(tokens, 'swap', amountOfFromToken, addressFrom, addressTo, pool.network, slippageTolerance * 2);
 }
 
-exports.trade = async (from, to, amount, dapp = 'SUSHISWAP') => {
-    let router;
-    switch (dapp) {
-      case 'TOROS':
-        router = Dapp.TOROS;
-        break;
-      default:
-        router = Dapp.SUSHISWAP;
-    }
-    
-    const pool = await _this.initPool();
-    const slippageTolerance = 0.5;
-    const tx = await pool.trade(
-        router,
-        from,
-        to,
-        amount,
-        slippageTolerance,
-        _this.gasInfo
-    );
-
-    helpers.delay();
-    return tx;
-}
-
-exports.lendDeposit = async (pool, token, amount) => {
+/**
+ * Lend Deposit to AAVE
+ * 
+ * @param {Pool} pool A dHedge pool object
+ * @param {Object} tokens An object with wallet and aave token balances
+ * @param {String} address A token's contract address
+ * @param {Number} amount Amount to lend, in format compatible with ethers.BigNumber
+ * @returns {Promise<Object>} An object with updated wallet and aave token balances
+ */
+exports.lendDeposit = async (pool, tokens, address, amount) => {
     helpers.log('LEND DEPOSIT TO AAVE V2');
-    helpers.delay();
+    helpers.delay(1);
 
     const tx = await pool.lend(
         Dapp.AAVE, 
-        token, 
-        amount,
+        address, 
+        Math.round(amount),
         0,
         _this.gasInfo
     );
     helpers.log(tx);
-    return tx;
+
+    return await _this.updateBalances(tokens, 'lend', amount, address);
 }
 
-exports.withdrawLentTokens = async (pool, token, amount) => {
-    helpers.log('WITHDRAW LENT TOKENS FROM AAVE V2');
-    helpers.delay();
-
-    const tx = await pool.withdrawDeposit(
-        Dapp.AAVE, 
-        token, 
-        amount,
-        _this.gasInfo
-    );
-    helpers.log(tx);
-    return tx;
-}
-
-exports.borrowDebt = async (pool, token, amount) => {
+/**
+ * Borrow Debt from AAVE
+ * 
+ * @param {Pool} pool A dHedge pool object
+ * @param {Object} tokens An object with wallet and aave token balances
+ * @param {String} address A token's contract address
+ * @param {Number} amount Amount to borrow, in format compatible with ethers.BigNumber
+ * @returns {Promise<Object>} An object with updated wallet and aave token balances
+ */
+exports.borrowDebt = async (pool, tokens, address, amount) => {
     helpers.log('BORROW TOKENS FROM AAVE V2');
-    helpers.delay();
+    helpers.delay(1);
 
     const tx = await pool.borrow(
         Dapp.AAVE, 
-        token, 
-        amount,
+        address, 
+        Math.round(amount),
         0,
         _this.gasInfo
     );
-
     helpers.log(tx);
-    return tx;
+
+    return await _this.updateBalances(tokens, 'borrow', amount, address);
 }
 
-exports.repayDebt = async (pool, token, amount) => {
+/**
+ * Repay Debt to AAVE
+ * 
+ * @param {Pool} pool A dHedge pool object
+ * @param {Object} tokens An object with wallet and aave token balances
+ * @param {String} address A token's contract address
+ * @param {Number} amount Amount to borrow, in format compatible with ethers.BigNumber
+ * @returns {Promise<Object>} An object with updated wallet and aave token balances
+ */
+exports.repayDebt = async (pool, tokens, address, amount) => {
     helpers.log('REPAY DEBT ON AAVE V2');
-    helpers.delay();
+    helpers.delay(1);
 
     const tx = await pool.repay(
         Dapp.AAVE, 
-        token, 
-        amount,
+        address, 
+        Math.round(amount),
         _this.gasInfo
     );
     helpers.log(tx);
-    return tx;
+    
+    return await _this.updateBalances(tokens, 'repay', amount, address);
+}
+
+/**
+ * Withdraw Debt from AAVE
+ * 
+ * @param {Pool} pool A dHedge pool object
+ * @param {Object} tokens An object with wallet and aave token balances
+ * @param {String} address A token's contract address
+ * @param {Number} amount Amount to borrow, in format compatible with ethers.BigNumber
+ * @returns {Promise<Object>} An object with updated wallet and aave token balances
+ */
+exports.withdrawLentTokens = async (pool, tokens, address, amount) => {
+    helpers.log('WITHDRAW LENT TOKENS FROM AAVE V2');
+    helpers.delay(1);
+
+    const tx = await pool.withdrawDeposit(
+        Dapp.AAVE, 
+        address, 
+        Math.round(amount), 
+        _this.gasInfo
+    );
+    helpers.log(tx);
+
+    return await _this.updateBalances(tokens, 'withdraw', amount, address);
 }
 
 /**
@@ -353,7 +566,7 @@ exports.repayDebt = async (pool, token, amount) => {
  * 
  * @param {Pool} pool dHedge Pool object
  * @param {Array} dapps A list of dapps to approve
- * @returns {Boolean} Boolean true if successful.
+ * @returns {Promise<Boolean>} Boolean true if successful.
  */
 exports.approveAllSpendingOnce = async (pool, dapps) => {
     const assets = await pool.getComposition();
@@ -363,8 +576,8 @@ exports.approveAllSpendingOnce = async (pool, dapps) => {
             Dapp.AAVE,
             Dapp.UNISWAPV3,
             // Dapp.AAVEV3,
-            // Dapp.SUSHISWAP,
             // Dapp.TOROS,
+            // Dapp.SUSHISWAP,
         ];
     }
 
@@ -384,3 +597,31 @@ exports.approveAllSpendingOnce = async (pool, dapps) => {
 
     return true;
 }
+
+
+// exports.trade = async (from, to, amount, dapp = 'SUSHISWAP') => {
+//     let router;
+//     switch (dapp) {
+//       case 'TOROS':
+//         router = Dapp.TOROS;
+//         break;
+//       default:
+//         router = Dapp.SUSHISWAP;
+//     }
+    
+//     const pool = await _this.initPool();
+//     const slippageTolerance = 0.5;
+//     const tx = await pool.trade(
+//         router,
+//         from,
+//         to,
+//         amount,
+//         slippageTolerance,
+//         _this.gasInfo
+//     );
+
+//     helpers.delay();
+//     return tx;
+// }
+
+

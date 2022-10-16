@@ -50,8 +50,12 @@ const basepath = 'https://api.zapper.fi/v2/';
  */
 exports.cleanAaveBalances = (assets) => {
     let response = {
-        'supply': [],
-        'variable-debt': []
+        'supply': {},
+        'variable-debt': {},
+        'supplyBalanceUsd': 0,
+        'debtBalanceUsd': 0,
+        'liquidationThreshold': 0,
+        'liquidationHealth': null,
     };
     
     if (assets.length === 0) {
@@ -61,7 +65,7 @@ exports.cleanAaveBalances = (assets) => {
     let supplyBalanceUsd = debtBalanceUsd = supplyLiquidationThreshold = 0;
     for (const asset of assets) {
         const groupId = asset.groupId;
-        response[groupId].push({
+        const token = {
             'symbol': asset.tokens[0].symbol, 
             'address': asset.tokens[0].address,
             'decimals': asset.tokens[0].decimals,
@@ -71,7 +75,8 @@ exports.cleanAaveBalances = (assets) => {
             'balanceUsd': asset.tokens[0].balanceUSD,
             'balanceBn': ethers.BigNumber.from(asset.tokens[0].balanceRaw),
             'liquidationThreshold': asset.dataProps.liquidationThreshold,
-        });
+        };
+        response[groupId][token.symbol] = token;
 
         if (groupId === 'supply') {
             supplyBalanceUsd += asset.tokens[0].balanceUSD;
@@ -81,8 +86,9 @@ exports.cleanAaveBalances = (assets) => {
     }
 
     // Calculate the liquidation threshold, potentially for multiple tokens
-    for (const asset of response['supply']) {
-        supplyLiquidationThreshold += (asset.balanceUsd / supplyBalanceUsd) * asset.liquidationThreshold;
+    for (const asset in response['supply']) {
+        const token = response['supply'][asset];
+        supplyLiquidationThreshold += (token.balanceUsd / supplyBalanceUsd) * token.liquidationThreshold;
     }
     response['liquidationThreshold'] = supplyLiquidationThreshold;
     response['supplyBalanceUsd'] = supplyBalanceUsd;
@@ -93,71 +99,3 @@ exports.cleanAaveBalances = (assets) => {
     response['liquidationHealth'] = (isFinite(liquidationHealth)) ? liquidationHealth : null;
     return response;
 }
-
-// EXAMPLE RESPONSE
-//
-//  {
-//    supply: [
-//      {
-//        symbol: 'USDC',
-//        address: '0x2791bca1f2de4661ed88a30c99a7a9449aa84174',
-//        decimals: 6,
-//        usdPrice: 1,
-//        balanceDecimal: 1.000032,
-//        balanceInt: '1000032',
-//        balanceUsd: 1.000032,
-//        balanceBn: BigNumber { _hex: '0x0f4260', _isBigNumber: true },
-//        liquidationThreshold: 0.85
-//      },
-//      {
-//        symbol: 'WBTC',
-//        address: '0x1bfd67037b42cf73acf2047067bd4f2c47d9bfd6',
-//        decimals: 8,
-//        usdPrice: 19173.32,
-//        balanceDecimal: 0.00023064,
-//        balanceInt: '23064',
-//        balanceUsd: 4.4221345248,
-//        balanceBn: BigNumber { _hex: '0x5a18', _isBigNumber: true },
-//        liquidationThreshold: 0.75
-//      }
-//    ],
-//    'variable-debt': [
-//      {
-//        symbol: 'USDC',
-//        address: '0x2791bca1f2de4661ed88a30c99a7a9449aa84174',
-//        decimals: 6,
-//        usdPrice: 1,
-//        balanceDecimal: 1.000062,
-//        balanceInt: '1000062',
-//        balanceUsd: 1.000062,
-//        balanceBn: BigNumber { _hex: '0x0f427e', _isBigNumber: true },
-//        liquidationThreshold: 0.85
-//      }
-//    ],
-//    liquidationThreshold: 0.7684434025665946,
-//    supplyBalanceUsd: 5.4221665248,
-//    debtBalanceUsd: 1.000062,
-//    liquidationHealth: 4.1663697786737215
-//  }
-//
-//
-//
-//  {
-//    supply: [
-//      {
-//        symbol: 'USDC',
-//        address: '0x2791bca1f2de4661ed88a30c99a7a9449aa84174',
-//        decimals: 6,
-//        usdPrice: 1,
-//        balanceDecimal: 5.000957,
-//        balanceInt: '5000957',
-//        balanceUsd: 5.000957,
-//        balanceBn: BigNumber { _hex: '0x4c4efd', _isBigNumber: true },
-//        liquidationThreshold: 0.85
-//      }
-//    ],
-//    liquidationThreshold: 0.85,
-//    supplyBalanceUsd: 5.000957,
-//    debtBalanceUsd: 0,
-//    liquidationHealth: null
-//  }

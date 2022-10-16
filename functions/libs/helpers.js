@@ -49,9 +49,14 @@ exports.log = (message) => {
     }
 };
 
-exports.delay = async (time = 2000) => {
-    _this.log('   ...Pausing for ' + time / 1000 + ' seconds...');
-    await delay(time);
+/**
+ * Delay 
+ * 
+ * @param {Number} time Number of seconds to pause script processing
+ */
+exports.delay = async (seconds = 2) => {
+    _this.log('   ...Pausing for ' + seconds + ' seconds...');
+    await delay(seconds * 1000);
 }
 
 // Gets a snapshot from Firestore as an Array
