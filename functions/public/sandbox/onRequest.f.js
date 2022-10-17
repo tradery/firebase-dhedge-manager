@@ -1,12 +1,14 @@
 const functions = require('firebase-functions');
 const cors = require('cors')({ origin: true });
+const { ethers } = require("@dhedge/v2-sdk");
+const _ = require('lodash');
 const helpers = require('../../libs/helpers');
 const btcSuperYield = require('../../libs/strategies/btcSuperYield');
 const dhedge = require('../../libs/dhedge');
 const coinmarketcap = require('../../libs/coinmarketcap');
-const { ethers } = require("@dhedge/v2-sdk");
 const delay = require('delay');
 const zapper = require('../../libs/zapper');
+const aave = require('../../libs/aave');
 
 /**
  * Authenticated Hello World test
@@ -61,6 +63,15 @@ exports = module.exports = functions
                 );
                 let tokens = await dhedge.getBalances(pool);
                 helpers.log(tokens);
+
+                /**
+                 * make sure debt is overpaid
+                 */
+                if (!_.isEmpty(tokens['aave']['variable-debt'])) {
+                    tokens = await aave.reduceDebt(pool, tokens);
+                    helpers.log(tokens);
+                }
+                
                 
                 // tokens = await dhedge.withdrawLentTokens(
                 //     pool, 
@@ -109,14 +120,7 @@ exports = module.exports = functions
                 // helpers.log(tokens);
                 // // expect supply wbtc to go up; no wbtc in wallet
 
-                // tokens = await dhedge.borrowDebt(
-                //     pool, 
-                //     tokens, 
-                //     dhedge.symbolToAddress('USDC'), 
-                //     tokens['aave']['supply']['WBTC'].balanceInt * tokens['aave']['supply']['WBTC'].liquidationThreshold * .9,
-                // );
-                // helpers.log(tokens);
-                // expect debt; wbtc in wallet
+                
 
 
 

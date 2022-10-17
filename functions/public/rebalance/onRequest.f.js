@@ -1,8 +1,8 @@
 const functions = require('firebase-functions');
 const { firestore } = require('firebase-admin');
 const cors = require('cors')({ origin: true });
+const _ = require('lodash');
 const helpers = require('../../libs/helpers');
-const zapper = require('../../libs/zapper');
 const dhedge = require('../../libs/dhedge');
 const aave = require('../../libs/aave');
 
@@ -93,27 +93,16 @@ exports = module.exports = functions
                     poolContract, 
                     network
                 );
-                const startingWalletBalances = await dhedge.getPoolBalances(pool);
-                
-                // Check AAVE balances with zapper
-                const startingAaveBalances = zapper.cleanAaveBalances(
-                    await zapper.aaveBalances(poolContract)
-                );
-
-                // Setup a new variable to track balance changes
-                let newBalances = {
-                    'wallet': startingWalletBalances,
-                    'aave':   startingAaveBalances
-                };
-                helpers.log(newBalances);
+                let tokens = await dhedge.getBalances(pool);
+                helpers.log(tokens);
 
                 // Check our last signal to see what we are long/short
                 if (longToken === 'USDC' && shortToken === 'USDC') {
                     
                     // If debt exist...
-                    if (startingAaveBalances['variable-debt'].length > 0) {
+                    if (!_.isEmpty(tokens['aave']['variable-debt'])) {
                             helpers.log('This is where we would reduce all debt...');
-                            newBalances = await aave.reduceDebt(pool, startingAaveBalances, startingWalletBalances);
+                            tokens = await aave.reduceDebt(pool, tokens);
                     }
 
                     if (startingAaveBalances['supply'].length > 0) {

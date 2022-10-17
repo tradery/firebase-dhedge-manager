@@ -171,6 +171,16 @@ exports.decimalToInteger = (amount, decimals) => {
 }
 
 /**
+ * Slippage Multiplier
+ * 
+ * @param {Float} slippagePadding The percentage of acceptable slippage
+ * @returns {Float} A multiplier for calculating amounts after expected slippage
+ */
+exports.slippageMultiplier = (slippagePadding = _this.swapSlippageTolerance) => {
+    return (100 - slippagePadding) / 100;
+}
+
+/**
  * Update Balances
  * 
  * @param {Object} tokens An object with wallet and aave tokens
@@ -189,10 +199,10 @@ exports.updateBalances = async (
     addressFrom, 
     addressTo = null, 
     network = 'polygon', 
-    slippagePadding = 0.5) => {
+    slippagePadding = _this.swapSlippageTolerance) => {
         const symbolFrom = _this.addressToSymbol(addressFrom);
         const symbolTo   = (addressTo !== null) ? _this.addressToSymbol(addressTo) : symbolFrom;
-        const expectedSlippage = (100 - slippagePadding) / 100;
+        const expectedSlippage = _this.slippageMultiplier(slippagePadding);
         let startFromZero = false;
         
         switch(instruction) {
@@ -441,7 +451,7 @@ exports.tradeUniswap = async (
         addressFrom, 
         addressTo, 
         amountOfFromToken, 
-        slippageTolerance = 0.5,
+        slippageTolerance = _this.swapSlippageTolerance,
         feeTier = 500
     ) => {
         helpers.log('SWAP WITH UNISWAP V3');
