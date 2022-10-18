@@ -104,7 +104,7 @@ exports = module.exports = functions
                 const lastSignal = helpers.snapshotToArray(signalsSnapshot)[0].data;
 
                 // Check to see if our signals have changed
-                if (false) { //lastSignal.long === longToken && lastSignal.short === shortToken) {
+                if (lastSignal.long === longToken && lastSignal.short === shortToken) {
                     // Signals have not changed since the last time they were sent
                     response.status(200).send({ message: 'Signal received. It has not changed.' });
                 } else {
