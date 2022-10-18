@@ -3,7 +3,7 @@ const helpers = require('./helpers');
 const dhedge = require('./dhedge');
 const _this = this;
 
-exports.liquidationHealthFloor = 1.05;
+exports.liquidationHealthFloor = 1.1;
 exports.liquidationHealthTargetFloor = 1.3;
 exports.liquidationHealthTargetCeiling = 1.5;
 
@@ -131,10 +131,8 @@ exports.repayDebt = async (pool, tokens, repaymentToken, sourceOfFunds = 'wallet
     let debtToRepayUsd = _.min([repaymentTarget, repaymentToken.balanceUsd]);
     let debtToRepayInt = _this.tokenIntFromUsdAmount(repaymentToken, debtToRepayUsd);
 
-    if (debtToRepayUsd <= 0) {
-        helpers.log(tokens['aave']);
-        return tokens;
-    }
+    // Check to ensure we don't have a calculation mistake
+    if (debtToRepayUsd <= 0) return tokens;
 
     if (sourceOfFunds === 'supply') {
             const maxSafeSupplyWithdraw = _this.getMaxSafeSupplyWithdraw(
@@ -146,6 +144,9 @@ exports.repayDebt = async (pool, tokens, repaymentToken, sourceOfFunds = 'wallet
             // Try to repay as much debt as possible
             debtToRepayUsd = _.min([repaymentTarget, maxSafeSupplyWithdraw, repaymentToken.balanceUsd]);
             debtToRepayInt = _this.tokenIntFromUsdAmount(repaymentToken, debtToRepayUsd);
+
+            // Check to ensure we don't have a calculation mistake
+            if (debtToRepayUsd <= 0) return tokens;
 
         // WITHDRAW SUPPLY
         helpers.log('Withdrawing $' + debtToRepayUsd + ' worth of ' + repaymentToken.symbol + ' from AAVE');
@@ -279,9 +280,6 @@ exports.reduceDebt = async (pool, tokens, liquidationHealthTarget = null) => {
     // Now we'll start selling supply tokens to pay more debt
     while (_this.isDebtSufficientlyRepaid(tokens, liquidationHealthTarget) === false) {
         
-        helpers.log('^^^ START WHILE LOOP ^^^');
-        helpers.log('Debt sufficiently repaid? ' + _this.isDebtSufficientlyRepaid(tokens, liquidationHealthTarget));
-
         // Loop through our supply tokens
         for (const supplyTokenSymbol in tokens['aave']['supply']) {
             helpers.log('REPAYING DEBT FROM SUPPLY');
