@@ -321,6 +321,9 @@ exports.updateBalances = async (
                 const newBalanceDecimal = newUsdBalance / tokens['wallet'][symbolTo].usdPrice;
                 const changeInAmountTo = _this.decimalToInteger(newBalanceDecimal, tokens['wallet'][symbolTo].decimals);
 
+                /**
+                 * @TODO Fix bug where TO token balance goes way up upon swapping
+                 */
                 // Add the swapped amount to our wallet
                 tokens['wallet'][symbolTo] = _this.updateTokenBalance(
                     tokens['wallet'][symbolTo],

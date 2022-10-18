@@ -3,7 +3,7 @@ const helpers = require('./helpers');
 const dhedge = require('./dhedge');
 const _this = this;
 
-exports.liquidationHealthFloor = 1.1;
+exports.liquidationHealthFloor = 1.15;
 exports.liquidationHealthTargetFloor = 1.3;
 exports.liquidationHealthTargetCeiling = 1.5;
 
