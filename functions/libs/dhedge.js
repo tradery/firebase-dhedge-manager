@@ -317,7 +317,7 @@ exports.updateBalances = async (
                 }
 
                 // Calculate the amount of tokens we expect to have in the TO token
-                const newUsdBalance = (expectedSlippage * tokens['wallet'][symbolFrom].balanceUsd) + tokens['wallet'][symbolTo].balanceUsd;
+                const newUsdBalance = expectedSlippage * tokens['wallet'][symbolFrom].balanceUsd;
                 const newBalanceDecimal = newUsdBalance / tokens['wallet'][symbolTo].usdPrice;
                 const changeInAmountTo = _this.decimalToInteger(newBalanceDecimal, tokens['wallet'][symbolTo].decimals);
 
