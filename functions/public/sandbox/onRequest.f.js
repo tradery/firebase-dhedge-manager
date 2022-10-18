@@ -67,8 +67,11 @@ exports = module.exports = functions
                 /**
                  * make sure debt is overpaid
                  */
+                /**
+                 * @TODO Figure out why I'm being auto-liquidated
+                 */
                 if (!_.isEmpty(tokens['aave']['variable-debt'])) {
-                    tokens = await aave.reduceDebt(pool, tokens);
+                    tokens = await aave.reduceDebt(pool, tokens, 1.8);
                     helpers.log(tokens);
                 }
                 
