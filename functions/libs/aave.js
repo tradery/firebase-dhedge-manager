@@ -31,7 +31,7 @@ exports.liquidationHealthTargetCeiling = 1.5;
         && tokens['wallet'][debtSymbol].balanceInt > 0) {
             helpers.log('REPAYING DEBT FROM MATCHING TOKEN IN WALLET');
             const token = tokens['wallet'][debtSymbol];
-            // tokens = await _this.repayDebt(pool, tokens, token, 'wallet', liquidationHealthTarget);
+            tokens = await _this.repayDebt(pool, tokens, token, 'wallet', liquidationHealthTarget);
 
             // Exit if our debt is suffiently paid off
             if(_this.isDebtSufficientlyRepaid(tokens, liquidationHealthTarget) === true) return tokens;
@@ -122,11 +122,6 @@ exports.liquidationHealthTargetCeiling = 1.5;
             debtToken.address,
             debtToRepayInt
         );
-
-        helpers.log('WE WANT THE LOWEST OF...');
-        helpers.log('debtToRepayUsd:              ' + debtToRepayUsd);
-        helpers.log('debtToRepayUsd * slip:       ' + dhedge.slippageMultiplier() * debtToRepayUsd);
-        helpers.log('token.balanceUsd after swap: ' + tokens['wallet'][debtSymbol].balanceUsd);
 
         debtToRepayInt = _this.tokenIntFromUsdAmount(debtToken, dhedge.slippageMultiplier() * debtToRepayUsd);
     }
