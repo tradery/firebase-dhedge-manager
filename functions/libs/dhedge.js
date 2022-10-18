@@ -108,7 +108,7 @@ exports.createNewToken = async (address, balance = 0, network = 'polygon') => {
         tokenDetails.decimals,
         tokenDetails.usdPrice
     );
-    return Object.assign(tokenDetails, tokenBalance);
+    return Object.assign({}, tokenDetails, tokenBalance);
 }
 
 /**
@@ -271,7 +271,7 @@ exports.updateBalances = async (
 
                 // Subtract the repaid amount from our aave debt
                 tokens['aave']['variable-debt'][symbolTo] = _this.updateTokenBalance(
-                    tokens['wallet'][symbolTo],
+                    tokens['aave']['variable-debt'][symbolTo],
                     -changeInAmount
                 );
                 break;
@@ -430,7 +430,7 @@ exports.updateTokenBalance = (token, integerChange, startFromZero = false) => {
     // Consider an edge condition, such as overpaying a debt balance
     const newAmount = ((token.balanceInt + integerChange) > 0) ? token.balanceInt + integerChange : 0;
     const newBalances = _this.getBalanceInfo(newAmount, token.decimals, token.usdPrice);
-    return Object.assign(token, newBalances);
+    return Object.assign({}, token, newBalances);
 }
 
 /**
@@ -467,7 +467,15 @@ exports.tradeUniswap = async (
         );
         helpers.log(tx);
 
-        return await _this.updateBalances(tokens, 'swap', amountOfFromToken, addressFrom, addressTo, pool.network, slippageTolerance * 2);
+        return await _this.updateBalances(
+            tokens, 
+            'swap', 
+            amountOfFromToken, 
+            addressFrom, 
+            addressTo, 
+            pool.network, 
+            slippageTolerance * 2
+        );
 }
 
 /**
@@ -526,7 +534,7 @@ exports.borrowDebt = async (pool, tokens, address, amount) => {
  * @param {Pool} pool A dHedge pool object
  * @param {Object} tokens An object with wallet and aave token balances
  * @param {String} address A token's contract address
- * @param {Number} amount Amount to borrow, in format compatible with ethers.BigNumber
+ * @param {Number} amount Amount to repay, in format compatible with ethers.BigNumber
  * @returns {Promise<Object>} An object with updated wallet and aave token balances
  */
 exports.repayDebt = async (pool, tokens, address, amount) => {
@@ -550,7 +558,7 @@ exports.repayDebt = async (pool, tokens, address, amount) => {
  * @param {Pool} pool A dHedge pool object
  * @param {Object} tokens An object with wallet and aave token balances
  * @param {String} address A token's contract address
- * @param {Number} amount Amount to borrow, in format compatible with ethers.BigNumber
+ * @param {Number} amount Amount to withdraw, in format compatible with ethers.BigNumber
  * @returns {Promise<Object>} An object with updated wallet and aave token balances
  */
 exports.withdrawLentTokens = async (pool, tokens, address, amount) => {
