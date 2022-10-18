@@ -81,8 +81,8 @@ exports.getBalances = async (pool) => {
     for (const asset of composition) {
         const token = await _this.createNewToken(asset.asset, asset.balance, pool.network);
         
-        // Ignore tokens like AAVEV2
-        if (token.decimals !== null) {
+        // Ignore tokens like AAVEV2, or zero balance assets
+        if (token.decimals !== null && token.balanceInt !== 0) {
             assets['wallet'][token.symbol] = token;
         }
     }
