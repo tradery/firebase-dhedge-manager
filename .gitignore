@@ -105,6 +105,3 @@ dist
 
 # Mac
 .DS_Store
-
-# Python files
-*.py
