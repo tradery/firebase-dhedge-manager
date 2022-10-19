@@ -10,26 +10,31 @@ exports.tokens = {
             address:  '0x2791bca1f2de4661ed88a30c99a7a9449aa84174',
             decimals: 6,
             coinMarketCapId: 3408,
+            aaveLiquidationThreshold: 0.85,
         },
         WBTC: {
             address:  '0x1bfd67037b42cf73acf2047067bd4f2c47d9bfd6',
             decimals: 8,
             coinMarketCapId: 1,
+            aaveLiquidationThreshold: 0.75,
         },
         WETH: {
             address:  '0x7ceb23fd6bc0add59e62ac25578270cff1b9f619',
             decimals: 18,
             coinMarketCapId: 1027,
+            aaveLiquidationThreshold: 0.825,
         },
         MATIC: {
             address:  '0x0000000000000000000000000000000000001010',
             decimals: 18,
             coinMarketCapId: 3890,
+            aaveLiquidationThreshold: 0.70,
         },
         AAVEV2: {
             address:  '0x8dff5e27ea6b7ac08ebfdf9eb090f32ee9a30fcf',
             decimals: null,
             coinMarketCapId: null,
+            aaveLiquidationThreshold: null,
         },
     }
 };
@@ -131,6 +136,7 @@ exports.addressToTokenDetails = async (address, network = 'polygon') => {
                 address: address.toLowerCase(),
                 decimals: tokens[token].decimals,
                 usdPrice: usdPrice,
+                liquidationThreshold: aaveLiquidationThreshold,
             };
         }
     }
@@ -203,7 +209,6 @@ exports.updateBalances = async (
         const symbolFrom = _this.addressToSymbol(addressFrom);
         const symbolTo   = (addressTo !== null) ? _this.addressToSymbol(addressTo) : symbolFrom;
         const expectedSlippage = _this.slippageMultiplier(slippagePadding);
-        let startFromZero = false;
         
         switch(instruction) {
             case 'lend':
@@ -220,15 +225,13 @@ exports.updateBalances = async (
 
                 // Set a token object in the aave supply if not already set
                 if (tokens['aave']['supply'][symbolTo] === undefined) {
-                    tokens['aave']['supply'][symbolTo] = tokens['wallet'][symbolFrom];
-                    startFromZero = true;  
+                    tokens['aave']['supply'][symbolTo] = await _this.createNewToken(addressFrom, 0, network);
                 }
 
                 // Add the lent amount to the aave supply
                 tokens['aave']['supply'][symbolTo] = _this.updateTokenBalance(
                     tokens['aave']['supply'][symbolTo],
                     changeInAmount,
-                    startFromZero
                 );
                 break;
             case 'borrow':
@@ -249,8 +252,8 @@ exports.updateBalances = async (
                 );
 
                 // Add the borrowed amount to the aave debt
-                tokens['aave']['variable-debt'][symbolFrom] = _this.updateTokenBalance(
-                    tokens['aave']['variable-debt'][symbolFrom],
+                tokens['aave']['variable-debt'][symbolTo] = _this.updateTokenBalance(
+                    tokens['aave']['variable-debt'][symbolTo],
                     changeInAmount
                 );
                 break;
@@ -290,14 +293,12 @@ exports.updateBalances = async (
                 // Set a token object in our wallet if not already set
                 if (tokens['wallet'][symbolTo] === undefined) {
                     tokens['wallet'][symbolTo] = await _this.createNewToken(addressFrom, 0, network);
-                    startFromZero = true;  
                 }
 
                 // Add the withdrawed amount to our wallet
                 tokens['wallet'][symbolTo] = _this.updateTokenBalance(
                     tokens['wallet'][symbolTo],
-                    changeInAmount,
-                    startFromZero
+                    changeInAmount
                 );
                 
                 break;
@@ -313,7 +314,6 @@ exports.updateBalances = async (
                         throw new Error('A TO address must be set so we know what we\'re swapping into');
                     }
                     tokens['wallet'][symbolTo] = await _this.createNewToken(addressTo, 0, network);
-                    startFromZero = true;
                 }
 
                 // Calculate the amount of tokens we expect to have in the TO token
@@ -321,14 +321,10 @@ exports.updateBalances = async (
                 const newBalanceDecimal = newUsdBalance / tokens['wallet'][symbolTo].usdPrice;
                 const changeInAmountTo = _this.decimalToInteger(newBalanceDecimal, tokens['wallet'][symbolTo].decimals);
 
-                /**
-                 * @TODO Fix bug where TO token balance goes way up upon swapping
-                 */
                 // Add the swapped amount to our wallet
                 tokens['wallet'][symbolTo] = _this.updateTokenBalance(
                     tokens['wallet'][symbolTo],
-                    changeInAmountTo,
-                    startFromZero
+                    changeInAmountTo
                 );
 
                 // Subtract the swapped amount from our wallet
@@ -422,14 +418,9 @@ exports.symbolToAddress = (symbol, network = 'polygon') => {
  * 
  * @param {Object} token A token object with lots of info
  * @param {Number} integerChange The amount to change the token balance
- * @param {Boolean} startFromZero Do we reset the token balance at zero?
  * @returns {Object} The token object with updated balance info
  */
-exports.updateTokenBalance = (token, integerChange, startFromZero = false) => {
-    if (startFromZero === true) {
-        token = Object.assign({}, token, _this.getBalanceInfo(0, token.decimals, token.usdPrice));
-    }
-
+exports.updateTokenBalance = (token, integerChange) => {
     // Consider an edge condition, such as overpaying a debt balance
     const newAmount = ((token.balanceInt + integerChange) > 0) ? token.balanceInt + integerChange : 0;
     const newBalances = _this.getBalanceInfo(newAmount, token.decimals, token.usdPrice);
