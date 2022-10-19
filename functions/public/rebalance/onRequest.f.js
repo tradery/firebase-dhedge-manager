@@ -120,34 +120,32 @@ exports = module.exports = functions
                     helpers.log('Now we should be holding only USDC and have AAVE cleared');
                     
                 } else {
-                    // If any non-short token debt exists
-
+                    // REDUCE DEBT !== SHORT SYMBOL
                     const debtSymbol = _.keys(tokens['aave']['variable-debt'])[0];
                     if (debtSymbol !== shortSymbol) {
-                        // REDUCE DEBT !== SHORT SYMBOL
                         tokens = await aave.reduceDebt(pool, tokens);
+                    }
 
-                        // WITHDRAW SUPPLY !== LONG SYMBOL
-                        for (const supplyTokenSymbol in tokens['aave']['supply']) {
-                            if (supplyTokenSymbol !== longSymbol) {
-                                const supplyToken = tokens['aave']['supply'][supplyTokenSymbol];
-                                helpers.log('Withdrawing $' + supplyToken.balanceUsd + ' worth of ' + supplyTokenSymbol + ' from AAVE supply');
-                                tokens = await dhedge.withdrawLentTokens(pool, tokens, supplyToken.address, supplyToken.balanceInt);
-                            }
+                    // WITHDRAW SUPPLY !== LONG SYMBOL
+                    for (const supplyTokenSymbol in tokens['aave']['supply']) {
+                        if (supplyTokenSymbol !== longSymbol) {
+                            const supplyToken = tokens['aave']['supply'][supplyTokenSymbol];
+                            helpers.log('Withdrawing $' + supplyToken.balanceUsd + ' worth of ' + supplyTokenSymbol + ' from AAVE supply');
+                            tokens = await dhedge.withdrawLentTokens(pool, tokens, supplyToken.address, supplyToken.balanceInt);
                         }
                     }
                     
+                    // SWAP WALLET ASSETS TO LONG TOKEN
                     for (const tokenSymbol in tokens['wallet']) {
                         if (tokenSymbol !== longSymbol) {
-                            // SWAP WALLET ASSETS TO LONG TOKEN
                             const token = tokens['wallet'][tokenSymbol];
                             helpers.log('Swapping ~$' + token.balanceUsd + ' worth of ' + tokenSymbol + ' into ' + longSymbol + ' on Uniswap');
                             tokens = await dhedge.tradeUniswap(pool, tokens, token.address, dhedge.symbolToAddress(longSymbol, pool.network), token.balanceInt);
                         }
                     }
-
+                    
+                    // LEND LONG TOKEN TO AAVE
                     if (tokens['wallet'][longSymbol] !== undefined) {
-                        // LEND LONG TOKEN TO AAVE
                         const token = tokens['wallet'][longSymbol];
                         helpers.log('Lending ~$' + token.balanceUsd + ' worth of ' + longSymbol + ' to AAVE supply');
                         tokens = await dhedge.lendDeposit(pool, tokens, token.address, token.balanceInt);
@@ -164,7 +162,7 @@ exports = module.exports = functions
                         // Repeat
 
                     helpers.log('This is where, if needed, we borrow more ' + shortSymbol
-                        + ' and swap into ' + longSymbol + ' until we reach our liquidaton health cieling');
+                    + ' and swap into ' + longSymbol + ' until we reach our liquidaton health cieling');
                     // WHILE LIQUIDATION HEALTH ABOVE TARGET CEILING (e.g. 1.5)
                         // Calculate max debt to borrow
                         // Borrow max debt
@@ -172,6 +170,38 @@ exports = module.exports = functions
                         // Lend Long tokens to AAVE
                         // Repeat
 
+                    // WHILE SAFE TO...
+                    while (tokens['aave']['liquidationHealth'] === null
+                        || tokens['aave']['liquidationHealth'] > aave.liquidationHealthTargetCeiling) {
+                            
+                            // Calculate max debt to borrow
+                            const debtToBorrowUsd = (tokens['aave']['supplyBalanceUsd'] * (tokens['aave']['liquidationThreshold']-0.07)) - tokens['aave']['debtBalanceUsd'];
+
+                            if (debtToBorrowUsd > 0) {
+                                // Get our short token
+                                const token = (tokens['wallet'][shortSymbol] === undefined)
+                                    ? await dhedge.createNewToken(dhedge.symbolToAddress(shortSymbol, pool.network), 0, pool.network)
+                                    : tokens['wallet'][shortSymbol];
+                                
+                                // Calculate max debt to borrow as int
+                                const debtToBorrowInt = aave.tokenIntFromUsdAmount(token, debtToBorrowUsd);
+
+                                // Borrow max debt
+                                helpers.log('Borrowing ~$' + debtToBorrowUsd + ' worth of ' + shortSymbol + ' from AAVE');
+                                tokens = await dhedge.borrowDebt(pool, tokens, token.address, debtToBorrowInt);
+
+                                // UniswapV3 into Long tokens
+                                helpers.log('Swapping ~$' + debtToBorrowUsd + ' worth of ' + shortSymbol + ' into ' + longSymbol + ' on Uniswap');
+                                tokens = await dhedge.tradeUniswap(pool, tokens, token.address, dhedge.symbolToAddress(longSymbol, pool.network), debtToBorrowInt);
+
+                                // Lend Long tokens to AAVE
+                                const longToken = tokens['wallet'][longSymbol];
+                                helpers.log('Lending ~$' + longToken.balanceUsd + ' worth of ' + longSymbol + ' to AAVE supply');
+                                tokens = await dhedge.lendDeposit(pool, tokens, longToken.address, longToken.balanceInt);
+                            }
+                            
+                    }
+                    
                     helpers.log('This is where, if needed, we withdrawl ' + longSymbol
                         + ' and swap into ' + shortSymbol + ' and repay debt until we reach our liquidaton health floor');
                     tokens = await aave.reduceDebt(pool, tokens, aave.liquidationHealthTargetFloor);
