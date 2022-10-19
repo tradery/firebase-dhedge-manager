@@ -70,10 +70,10 @@ exports = module.exports = functions
                 /**
                  * @TODO Figure out why I'm being auto-liquidated
                  */
-                if (!_.isEmpty(tokens['aave']['variable-debt'])) {
-                    tokens = await aave.reduceDebt(pool, tokens, 1.8);
-                    helpers.log(tokens);
-                }
+                // if (!_.isEmpty(tokens['aave']['variable-debt'])) {
+                //     tokens = await aave.reduceDebt(pool, tokens, 1.8);
+                //     helpers.log(tokens);
+                // }
                 
                 
                 // tokens = await dhedge.withdrawLentTokens(
