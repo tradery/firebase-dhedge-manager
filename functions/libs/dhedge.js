@@ -450,7 +450,7 @@ exports.tradeUniswap = async (
         feeTier = 500
     ) => {
         helpers.log('SWAP WITH UNISWAP V3');
-        helpers.delay(1);
+        helpers.delay(2);
 
         const tx = await pool.tradeUniswapV3(
             addressFrom,
@@ -484,7 +484,7 @@ exports.tradeUniswap = async (
  */
 exports.lendDeposit = async (pool, tokens, address, amount) => {
     helpers.log('LEND DEPOSIT TO AAVE V2');
-    helpers.delay(1);
+    helpers.delay(2);
 
     const tx = await pool.lend(
         Dapp.AAVE, 
@@ -509,7 +509,7 @@ exports.lendDeposit = async (pool, tokens, address, amount) => {
  */
 exports.borrowDebt = async (pool, tokens, address, amount) => {
     helpers.log('BORROW TOKENS FROM AAVE V2');
-    helpers.delay(1);
+    helpers.delay(2);
 
     const tx = await pool.borrow(
         Dapp.AAVE, 
@@ -534,7 +534,7 @@ exports.borrowDebt = async (pool, tokens, address, amount) => {
  */
 exports.repayDebt = async (pool, tokens, address, amount) => {
     helpers.log('REPAY DEBT ON AAVE V2');
-    helpers.delay(1);
+    helpers.delay(2);
 
     const tx = await pool.repay(
         Dapp.AAVE, 
@@ -558,7 +558,7 @@ exports.repayDebt = async (pool, tokens, address, amount) => {
  */
 exports.withdrawLentTokens = async (pool, tokens, address, amount) => {
     helpers.log('WITHDRAW LENT TOKENS FROM AAVE V2');
-    helpers.delay(1);
+    helpers.delay(2);
 
     const tx = await pool.withdrawDeposit(
         Dapp.AAVE, 
