@@ -125,18 +125,19 @@ exports.createNewToken = async (address, balance = 0, network = 'polygon') => {
  */
 exports.addressToTokenDetails = async (address, network = 'polygon') => {
     const tokens = _this.tokens[network];
-    for (const token in tokens) {
-        if (tokens[token].address.toLowerCase() === address.toLowerCase()) {
+    for (const tokenSymbol in tokens) {
+        const token = tokens[tokenSymbol];
+        if (token.address.toLowerCase() === address.toLowerCase()) {
             // Get usd price from coin market cap
-            const usdPrice = await coinmarketcap.getUsdPrice(tokens[token].coinMarketCapId);
+            const usdPrice = await coinmarketcap.getUsdPrice(token.coinMarketCapId);
 
             // Transform into object
             return {
-                symbol: token,
+                symbol: tokenSymbol,
                 address: address.toLowerCase(),
-                decimals: tokens[token].decimals,
+                decimals: token.decimals,
                 usdPrice: usdPrice,
-                liquidationThreshold: aaveLiquidationThreshold,
+                liquidationThreshold: token.aaveLiquidationThreshold,
             };
         }
     }
