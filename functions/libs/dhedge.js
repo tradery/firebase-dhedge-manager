@@ -210,7 +210,8 @@ exports.updateBalances = async (
         const symbolFrom = _this.addressToSymbol(addressFrom);
         const symbolTo   = (addressTo !== null) ? _this.addressToSymbol(addressTo) : symbolFrom;
         const expectedSlippage = _this.slippageMultiplier(slippagePadding);
-        
+        let newUsdBalance = newBalanceDecimal = changeInAmountTo = 0;
+
         switch(instruction) {
             case 'lend':
                 // Make sure we have tokens in the wallet
@@ -318,9 +319,9 @@ exports.updateBalances = async (
                 }
 
                 // Calculate the amount of tokens we expect to have in the TO token
-                const newUsdBalance = expectedSlippage * tokens['wallet'][symbolFrom].balanceUsd;
-                const newBalanceDecimal = newUsdBalance / tokens['wallet'][symbolTo].usdPrice;
-                const changeInAmountTo = _this.decimalToInteger(newBalanceDecimal, tokens['wallet'][symbolTo].decimals);
+                newUsdBalance = expectedSlippage * tokens['wallet'][symbolFrom].balanceUsd;
+                newBalanceDecimal = newUsdBalance / tokens['wallet'][symbolTo].usdPrice;
+                changeInAmountTo = _this.decimalToInteger(newBalanceDecimal, tokens['wallet'][symbolTo].decimals);
 
                 // Add the swapped amount to our wallet
                 tokens['wallet'][symbolTo] = _this.updateTokenBalance(
