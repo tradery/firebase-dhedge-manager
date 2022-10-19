@@ -21,7 +21,7 @@ const helpers = require('../../libs/helpers');
         ],
     })
     .pubsub
-    .schedule('every 15 minutes')
+    .schedule('every 5 minutes')
     .onRun(async (context) => {
         try {
             // Make sure our ENVs are set
