@@ -15,7 +15,7 @@ exports.liquidationHealthTargetCeiling = 1.5;
  * @param {Float} liquidationHealthTarget The liquidation health target to reach before quitting; Use `null` to empty all debt.
  * @returns {Promise<Object>} Updated wallet and aave balances
  */
- exports.reduceDebt = async (pool, tokens, liquidationHealthTarget = null) => {
+exports.reduceDebt = async (pool, tokens, liquidationHealthTarget = null) => {
     // Check to see if we have any debt to repay
     if (_this.isDebtSufficientlyRepaid(tokens, liquidationHealthTarget) === true) {
             helpers.log('We don\'t need to reduce the debt.');
@@ -78,7 +78,7 @@ exports.liquidationHealthTargetCeiling = 1.5;
  * @param {Float} liquidationHealthTarget Target liquidation health. Defaults to `null`.
  * @returns {Promise<Object>} A list of wallet and aave tokens with updated balances
  */
- exports.repayDebt = async (pool, tokens, repaymentToken, sourceOfFunds = 'wallet', liquidationHealthTarget = null) => {
+exports.repayDebt = async (pool, tokens, repaymentToken, sourceOfFunds = 'wallet', liquidationHealthTarget = null) => {
     const debtSymbol = _.keys(tokens['aave']['variable-debt'])[0];
     const debtToken = tokens['aave']['variable-debt'][debtSymbol];
     const repaymentTarget = _this.getDebtAdjustmentAmount(tokens, sourceOfFunds, liquidationHealthTarget);
@@ -141,7 +141,7 @@ exports.liquidationHealthTargetCeiling = 1.5;
  * @param {Float} liquidationHealthTarget The liquidation health target. Defaults to `null`.
  * @returns {Float} The amount of USD to adjust the debt by.
  */
- exports.getDebtAdjustmentAmount = (tokens, sourceOfFunds = 'wallet', liquidationHealthTarget = null) => {
+exports.getDebtAdjustmentAmount = (tokens, sourceOfFunds = 'wallet', liquidationHealthTarget = null) => {
     const overpayBufferMultiple = 1.04;
     let amount = 0;
     
@@ -196,7 +196,7 @@ exports.liquidationHealthTargetCeiling = 1.5;
  * @param {Float} liquidationHealthTarget The liquidation health target. Defaults to `null`.
  * @returns {Boolean} True if the debt is sufficiently repaid; false if there is more to pay
  */
- exports.isDebtSufficientlyRepaid = (tokens, liquidationHealthTarget = null) => {
+exports.isDebtSufficientlyRepaid = (tokens, liquidationHealthTarget = null) => {
     if (_.isEmpty(tokens['aave']['variable-debt'])
         || tokens['aave'].liquidationHealth === null
         || (liquidationHealthTarget !== null
@@ -256,7 +256,7 @@ exports.getDebtOffset = (supplyUsd, debtUsd, liquidationThreshold, liquidationHe
  * @param {Float} liquidationHealthTarget Target liquidation health
  * @returns {Float} Postive number if we need to reduce debt; Negative number if we need to increase debt
  */
- exports.getDebtAndSupplyOffset = (supplyUsd, debtUsd, liquidationThreshold, liquidationHealthTarget) => {
+exports.getDebtAndSupplyOffset = (supplyUsd, debtUsd, liquidationThreshold, liquidationHealthTarget) => {
     // Problem:  solve for n: (a-n)/(b-n) = c 
     // Solution: n = (-a + (b * c))/(-1 + c)
     const targetDebtRatio = liquidationThreshold / liquidationHealthTarget;
@@ -274,7 +274,7 @@ exports.getDebtOffset = (supplyUsd, debtUsd, liquidationThreshold, liquidationHe
  * @param {Float} liquidationHealthFloor Liquidation health floor that we can't go below. Defaults to global variable (`1.05`).
  * @returns {Float} Postive number if it is safe to reduce supply
  */
- exports.getMaxSafeSupplyWithdraw = (supplyUsd, debtUsd, liquidationThreshold, liquidationHealthFloor = _this.liquidationHealthFloor) => {
+exports.getMaxSafeSupplyWithdraw = (supplyUsd, debtUsd, liquidationThreshold, liquidationHealthFloor = _this.liquidationHealthFloor) => {
     // Problem:  solve for c: a / (b / c) = d
     // Solution: d = c - ((b * d) / a)
     return supplyUsd - ((debtUsd * liquidationHealthFloor) / liquidationThreshold);

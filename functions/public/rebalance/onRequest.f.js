@@ -136,7 +136,7 @@ exports = module.exports = functions
                             }
                         }
                     }
-
+                    
                     for (const tokenSymbol in tokens['wallet']) {
                         if (tokenSymbol !== longSymbol) {
                             // SWAP WALLET ASSETS TO LONG TOKEN
