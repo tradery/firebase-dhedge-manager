@@ -120,13 +120,13 @@ exports = module.exports = functions
                     helpers.log('Now we should be holding only USDC and have AAVE cleared');
                     
                 } else {
-                    // REDUCE DEBT !== SHORT SYMBOL
+                    // REDUCE ANY DEBT THAT DOES !== SHORT SYMBOL
                     const debtSymbol = _.keys(tokens['aave']['variable-debt'])[0];
                     if (debtSymbol !== shortSymbol) {
                         tokens = await aave.reduceDebt(pool, tokens);
                     }
 
-                    // WITHDRAW SUPPLY !== LONG SYMBOL
+                    // WITHDRAW ANY SUPPLY THAT DOES !== LONG SYMBOL
                     for (const supplyTokenSymbol in tokens['aave']['supply']) {
                         if (supplyTokenSymbol !== longSymbol) {
                             const supplyToken = tokens['aave']['supply'][supplyTokenSymbol];
@@ -135,7 +135,7 @@ exports = module.exports = functions
                         }
                     }
                     
-                    // SWAP WALLET ASSETS TO LONG TOKEN
+                    // SWAP ANY WALLET ASSETS THAT !== LONG TOKEN, INTO LONG TOKEN
                     for (const tokenSymbol in tokens['wallet']) {
                         if (tokenSymbol !== longSymbol) {
                             const token = tokens['wallet'][tokenSymbol];
@@ -144,7 +144,7 @@ exports = module.exports = functions
                         }
                     }
                     
-                    // LEND LONG TOKEN TO AAVE
+                    // LEND ALL LONG TOKENS TO AAVE
                     if (tokens['wallet'][longSymbol] !== undefined) {
                         const token = tokens['wallet'][longSymbol];
                         helpers.log('Lending ~$' + token.balanceUsd + ' worth of ' + longSymbol + ' to AAVE supply');
@@ -199,7 +199,6 @@ exports = module.exports = functions
                                 helpers.log('Lending ~$' + longToken.balanceUsd + ' worth of ' + longSymbol + ' to AAVE supply');
                                 tokens = await dhedge.lendDeposit(pool, tokens, longToken.address, longToken.balanceInt);
                             }
-                            
                     }
                     
                     helpers.log('This is where, if needed, we withdrawl ' + longSymbol
