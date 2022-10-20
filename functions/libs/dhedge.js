@@ -451,7 +451,7 @@ exports.tradeUniswap = async (
         feeTier = 500
     ) => {
         helpers.log('SWAP WITH UNISWAP V3');
-        helpers.delay(2);
+        helpers.delay(4);
 
         const tx = await pool.tradeUniswapV3(
             addressFrom,
@@ -475,6 +475,60 @@ exports.tradeUniswap = async (
 }
 
 /**
+ * Trade (not Uniswap)
+ * 
+ * @param {Pool} pool A dHedge pool object
+ * @param {Object} tokens An object with wallet and aave token balances
+ * @param {String} addressFrom The token contract address we're swapping from
+ * @param {String} addressTo The token contract address we're swapping to
+ * @param {Number} amountOfFromToken Amount of fromToken to swap, in format compatible with ethers.BigNumber
+ * @param {Float} slippageTolerance Percentage of slippage to accept in trades. Defaults to `0.5`.
+ * @param {String} dapp `SUSHISWAP` or `TOROS`.
+ * @returns {Promise<Object>} An object with updated wallet and aave token balances
+ */
+ exports.trade = async (
+    pool,
+    tokens,
+    addressFrom, 
+    addressTo, 
+    amountOfFromToken, 
+    slippageTolerance = _this.swapSlippageTolerance,
+    dapp = 'SUSHISWAP'
+) => {
+    helpers.log('SWAP WITH ' + dapp);
+    helpers.delay(4);
+
+    let router;
+    switch (dapp) {
+      case 'TOROS':
+        router = Dapp.TOROS;
+        break;
+      default:
+        router = Dapp.SUSHISWAP;
+    }
+
+    const tx = await pool.trade(
+        router,
+        addressFrom,
+        addressTo,
+        Math.round(amountOfFromToken),
+        slippageTolerance,
+        _this.gasInfo
+    );
+    helpers.log(tx);
+
+    return await _this.updateBalances(
+        tokens, 
+        'swap', 
+        amountOfFromToken, 
+        addressFrom, 
+        addressTo, 
+        pool.network, 
+        slippageTolerance * 2
+    );
+}
+
+/**
  * Lend Deposit to AAVE
  * 
  * @param {Pool} pool A dHedge pool object
@@ -485,7 +539,7 @@ exports.tradeUniswap = async (
  */
 exports.lendDeposit = async (pool, tokens, address, amount) => {
     helpers.log('LEND DEPOSIT TO AAVE V2');
-    helpers.delay(2);
+    helpers.delay(4);
 
     const tx = await pool.lend(
         Dapp.AAVE, 
@@ -510,7 +564,7 @@ exports.lendDeposit = async (pool, tokens, address, amount) => {
  */
 exports.borrowDebt = async (pool, tokens, address, amount) => {
     helpers.log('BORROW TOKENS FROM AAVE V2');
-    helpers.delay(2);
+    helpers.delay(4);
 
     const tx = await pool.borrow(
         Dapp.AAVE, 
@@ -535,7 +589,7 @@ exports.borrowDebt = async (pool, tokens, address, amount) => {
  */
 exports.repayDebt = async (pool, tokens, address, amount) => {
     helpers.log('REPAY DEBT ON AAVE V2');
-    helpers.delay(2);
+    helpers.delay(4);
 
     const tx = await pool.repay(
         Dapp.AAVE, 
@@ -559,7 +613,7 @@ exports.repayDebt = async (pool, tokens, address, amount) => {
  */
 exports.withdrawLentTokens = async (pool, tokens, address, amount) => {
     helpers.log('WITHDRAW LENT TOKENS FROM AAVE V2');
-    helpers.delay(2);
+    helpers.delay(4);
 
     const tx = await pool.withdrawDeposit(
         Dapp.AAVE, 
@@ -611,31 +665,3 @@ exports.approveAllSpendingOnce = async (pool, dapps) => {
 
     return true;
 }
-
-
-// exports.trade = async (from, to, amount, dapp = 'SUSHISWAP') => {
-//     let router;
-//     switch (dapp) {
-//       case 'TOROS':
-//         router = Dapp.TOROS;
-//         break;
-//       default:
-//         router = Dapp.SUSHISWAP;
-//     }
-    
-//     const pool = await _this.initPool();
-//     const slippageTolerance = 0.5;
-//     const tx = await pool.trade(
-//         router,
-//         from,
-//         to,
-//         amount,
-//         slippageTolerance,
-//         _this.gasInfo
-//     );
-
-//     helpers.delay();
-//     return tx;
-// }
-
-
