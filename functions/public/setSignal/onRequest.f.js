@@ -97,6 +97,8 @@ exports = module.exports = functions
                 if (shortToken === 'BTC') shortToken = 'WBTC';
                 if (longToken  === 'ETH') longToken  = 'WETH';
                 if (shortToken === 'ETH') shortToken = 'WETH';
+                if (longToken  === 'MATIC') longToken  = 'WMATIC';
+                if (shortToken === 'MATIC') shortToken = 'WMATIC';
 
                 // Get the value of the last saved signal
                 const signalsRef = portfolioRef.collection('signals');
