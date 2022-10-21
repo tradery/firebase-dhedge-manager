@@ -24,8 +24,8 @@ exports.tokens = {
             coinMarketCapId: 1027,
             aaveLiquidationThreshold: 0.825,
         },
-        MATIC: {
-            address:  '0x0000000000000000000000000000000000001010',
+        WMATIC: {
+            address:  '0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270',
             decimals: 18,
             coinMarketCapId: 3890,
             aaveLiquidationThreshold: 0.70,
