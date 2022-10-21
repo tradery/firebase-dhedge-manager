@@ -1,4 +1,5 @@
 const { Dhedge, Dapp, Network, ethers, Pool } = require("@dhedge/v2-sdk");
+const _ = require('lodash');
 const helpers = require('./helpers');
 const coinmarketcap = require('./coinmarketcap');
 const zapper = require("./zapper");
@@ -153,7 +154,7 @@ exports.addressToTokenDetails = async (address, network = 'polygon') => {
  * @returns {Object} A list of balances in different formats
  */
 exports.getBalanceInfo = (amount, decimals, tokenPriceUsd) => {
-    const amountBn = ethers.BigNumber.from(amount);
+    const amountBn = ethers.BigNumber.from(amount.toString());
     const balanceDecimal = parseFloat(ethers.utils.formatUnits(amountBn, decimals));
     const balanceInt = _this.decimalToInteger(balanceDecimal, decimals);
     const balanceUsd = tokenPriceUsd * balanceDecimal;
@@ -451,12 +452,12 @@ exports.tradeUniswap = async (
         feeTier = 500
     ) => {
         helpers.log('SWAP WITH UNISWAP V3');
-        helpers.delay(4);
+        await helpers.delay(2);
 
         const tx = await pool.tradeUniswapV3(
             addressFrom,
             addressTo,
-            Math.round(amountOfFromToken),
+            amountOfFromToken.toString(),
             feeTier,
             slippageTolerance,
             _this.gasInfo
@@ -496,7 +497,7 @@ exports.tradeUniswap = async (
     dapp = 'SUSHISWAP'
 ) => {
     helpers.log('SWAP WITH ' + dapp);
-    helpers.delay(4);
+    await helpers.delay(2);
 
     let router;
     switch (dapp) {
@@ -511,7 +512,7 @@ exports.tradeUniswap = async (
         router,
         addressFrom,
         addressTo,
-        Math.round(amountOfFromToken),
+        amountOfFromToken.toString(),
         slippageTolerance,
         _this.gasInfo
     );
@@ -539,12 +540,12 @@ exports.tradeUniswap = async (
  */
 exports.lendDeposit = async (pool, tokens, address, amount) => {
     helpers.log('LEND DEPOSIT TO AAVE V2');
-    helpers.delay(4);
+    await helpers.delay(2);
 
     const tx = await pool.lend(
         Dapp.AAVE, 
         address, 
-        Math.round(amount),
+        amount.toString(),
         0,
         _this.gasInfo
     );
@@ -564,12 +565,12 @@ exports.lendDeposit = async (pool, tokens, address, amount) => {
  */
 exports.borrowDebt = async (pool, tokens, address, amount) => {
     helpers.log('BORROW TOKENS FROM AAVE V2');
-    helpers.delay(4);
+    await helpers.delay(2);
 
     const tx = await pool.borrow(
         Dapp.AAVE, 
         address, 
-        Math.round(amount),
+        amount.toString(),
         0,
         _this.gasInfo
     );
@@ -589,12 +590,12 @@ exports.borrowDebt = async (pool, tokens, address, amount) => {
  */
 exports.repayDebt = async (pool, tokens, address, amount) => {
     helpers.log('REPAY DEBT ON AAVE V2');
-    helpers.delay(4);
+    await helpers.delay(2);
 
     const tx = await pool.repay(
         Dapp.AAVE, 
         address, 
-        Math.round(amount),
+        amount.toString(),
         _this.gasInfo
     );
     helpers.log(tx);
@@ -613,12 +614,12 @@ exports.repayDebt = async (pool, tokens, address, amount) => {
  */
 exports.withdrawLentTokens = async (pool, tokens, address, amount) => {
     helpers.log('WITHDRAW LENT TOKENS FROM AAVE V2');
-    helpers.delay(4);
+    await helpers.delay(2);
 
     const tx = await pool.withdrawDeposit(
         Dapp.AAVE, 
         address, 
-        Math.round(amount), 
+        amount.toString(), 
         _this.gasInfo
     );
     helpers.log(tx);
@@ -637,6 +638,8 @@ exports.withdrawLentTokens = async (pool, tokens, address, amount) => {
  * @returns {Promise<Boolean>} Boolean true if successful.
  */
 exports.approveAllSpendingOnce = async (pool, dapps) => {
+    helpers.log('APPROVING TOKEN USE ON DAPPS');
+    
     const assets = await pool.getComposition();
     let dappsToApprove = dapps;
     if (dappsToApprove === undefined) {
@@ -652,7 +655,8 @@ exports.approveAllSpendingOnce = async (pool, dapps) => {
     for (const asset of assets) {
         for (const dapp of dappsToApprove) {
             helpers.log('Approving spending of ' + asset.asset + ' on ' + dapp);
-
+            await helpers.delay(2);
+            
             const tx = await pool.approve(
                 dapp,
                 asset.asset,
