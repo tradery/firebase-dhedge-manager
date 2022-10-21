@@ -10,7 +10,7 @@ const dhedge = require('../../libs/dhedge');
 exports = module.exports = functions
     .runWith({
         // Ensure the function has enough memory and time to process
-        timeoutSeconds: 300,
+        timeoutSeconds: 400,
         memory: "1GB",
         secrets: [
             "API_KEY", 
@@ -61,18 +61,24 @@ exports = module.exports = functions
 
                 // And that it's active
                 if (portfolioDoc.data().isActive === false)
-                    throw new Error("This secret is no longer active.");
+                    throw new Error("This secret is not active.");
 
                 // Yay! We're authorized!
                 const { poolContract, network } = portfolioDoc.data();
 
+                /**
+                 * @TODO replace mnemonic env with decrypted value from db
+                 */
                 // Approve spending on exchanges
-                // @TODO replace mnemonic env with decrypted value from db
                 const pool = await dhedge.initPool(
                     process.env.MNEMONIC,
                     poolContract, 
                     network
                 );
+
+                /**
+                 * @TODO Store spending approvals in the db so we don't waste gas
+                 */
                 await dhedge.approveAllSpendingOnce(pool);
                 
                 // Respond
