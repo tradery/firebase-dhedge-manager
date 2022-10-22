@@ -1,14 +1,8 @@
 const functions = require('firebase-functions');
 const cors = require('cors')({ origin: true });
-const { ethers } = require("@dhedge/v2-sdk");
 const _ = require('lodash');
 const helpers = require('../../libs/helpers');
-const btcSuperYield = require('../../libs/strategies/btcSuperYield');
 const dhedge = require('../../libs/dhedge');
-const coinmarketcap = require('../../libs/coinmarketcap');
-const delay = require('delay');
-const zapper = require('../../libs/zapper');
-const aave = require('../../libs/aave');
 
 /**
  * Authenticated Hello World test
