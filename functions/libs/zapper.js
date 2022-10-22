@@ -93,6 +93,9 @@ exports.cleanAaveBalances = (assets) => {
     response['liquidationThreshold'] = supplyLiquidationThreshold;
     response['supplyBalanceUsd'] = supplyBalanceUsd;
     response['debtBalanceUsd'] = debtBalanceUsd;
+
+    const leverage = supplyBalanceUsd / (supplyBalanceUsd - debtBalanceUsd);
+    response['leverage'] = (isFinite(leverage)) ? leverage : 0;
     
     // And finally the liquidation health
     const liquidationHealth = supplyLiquidationThreshold / (debtBalanceUsd / supplyBalanceUsd);

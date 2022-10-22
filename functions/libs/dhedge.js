@@ -1,5 +1,4 @@
 const { Dhedge, Dapp, Network, ethers, Pool } = require("@dhedge/v2-sdk");
-const _ = require('lodash');
 const helpers = require('./helpers');
 const coinmarketcap = require('./coinmarketcap');
 const zapper = require("./zapper");
@@ -357,6 +356,9 @@ exports.updateBalances = async (
         tokens['aave']['liquidationThreshold'] = (isFinite(supplyLiquidationThreshold)) ? supplyLiquidationThreshold : 0;
         tokens['aave']['supplyBalanceUsd'] = supplyBalanceUsd;
         tokens['aave']['debtBalanceUsd'] = debtBalanceUsd;
+
+        const leverage = supplyBalanceUsd / (supplyBalanceUsd - debtBalanceUsd);
+        tokens['aave']['leverage'] = (isFinite(leverage)) ? leverage : 0;
         
         // And the liquidation health
         const liquidationHealth = supplyLiquidationThreshold / (debtBalanceUsd / supplyBalanceUsd);
@@ -452,7 +454,7 @@ exports.tradeUniswap = async (
         feeTier = 500
     ) => {
         helpers.log('SWAP WITH UNISWAP V3');
-        await helpers.delay(2);
+        await helpers.delay(3);
 
         const tx = await pool.tradeUniswapV3(
             addressFrom,
@@ -497,7 +499,7 @@ exports.tradeUniswap = async (
     dapp = 'SUSHISWAP'
 ) => {
     helpers.log('SWAP WITH ' + dapp);
-    await helpers.delay(2);
+    await helpers.delay(3);
 
     let router;
     switch (dapp) {
@@ -540,7 +542,7 @@ exports.tradeUniswap = async (
  */
 exports.lendDeposit = async (pool, tokens, address, amount) => {
     helpers.log('LEND DEPOSIT TO AAVE V2');
-    await helpers.delay(2);
+    await helpers.delay(3);
 
     const tx = await pool.lend(
         Dapp.AAVE, 
@@ -565,7 +567,7 @@ exports.lendDeposit = async (pool, tokens, address, amount) => {
  */
 exports.borrowDebt = async (pool, tokens, address, amount) => {
     helpers.log('BORROW TOKENS FROM AAVE V2');
-    await helpers.delay(2);
+    await helpers.delay(3);
 
     const tx = await pool.borrow(
         Dapp.AAVE, 
@@ -590,7 +592,7 @@ exports.borrowDebt = async (pool, tokens, address, amount) => {
  */
 exports.repayDebt = async (pool, tokens, address, amount) => {
     helpers.log('REPAY DEBT ON AAVE V2');
-    await helpers.delay(2);
+    await helpers.delay(3);
 
     const tx = await pool.repay(
         Dapp.AAVE, 
@@ -614,7 +616,7 @@ exports.repayDebt = async (pool, tokens, address, amount) => {
  */
 exports.withdrawLentTokens = async (pool, tokens, address, amount) => {
     helpers.log('WITHDRAW LENT TOKENS FROM AAVE V2');
-    await helpers.delay(2);
+    await helpers.delay(3);
 
     const tx = await pool.withdrawDeposit(
         Dapp.AAVE, 
@@ -655,7 +657,7 @@ exports.approveAllSpendingOnce = async (pool, dapps) => {
     for (const asset of assets) {
         for (const dapp of dappsToApprove) {
             helpers.log('Approving spending of ' + asset.asset + ' on ' + dapp);
-            await helpers.delay(2);
+            await helpers.delay(3);
             
             const tx = await pool.approve(
                 dapp,
