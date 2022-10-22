@@ -3,6 +3,7 @@ const helpers = require('./helpers');
 const dhedge = require('./dhedge');
 const _this = this;
 
+exports.maxLeverage = 5;
 exports.liquidationHealthFloor = 1.08;
 exports.liquidationHealthTargetFloor = 1.25;
 exports.liquidationHealthTargetCeiling = 1.35;
@@ -12,12 +13,13 @@ exports.liquidationHealthTargetCeiling = 1.35;
  * 
  * @param {Pool} pool A dHedge Pool object
  * @param {Object} tokens A list of wallet and aave token balances
+ * @param {Float} maxLeverage The leverage target to reach before quitting. Defaults to `5`.
  * @param {Float} liquidationHealthTarget The liquidation health target to reach before quitting; Use `null` to empty all debt.
  * @returns {Promise<Object>} Updated wallet and aave balances
  */
-exports.reduceDebt = async (pool, tokens, liquidationHealthTarget = null) => {
+exports.reduceDebt = async (pool, tokens, maxLeverage = _this.maxLeverage, liquidationHealthTarget = null) => {
     // Check to see if we have any debt to repay
-    if (_this.isDebtSufficientlyRepaid(tokens, liquidationHealthTarget) === true) {
+    if (_this.isDebtSufficientlyRepaid(tokens, maxLeverage, liquidationHealthTarget) === true) {
             helpers.log('We don\'t need to reduce the debt.');
             return tokens;
     }
@@ -31,10 +33,10 @@ exports.reduceDebt = async (pool, tokens, liquidationHealthTarget = null) => {
         && tokens['wallet'][debtSymbol].balanceInt > 0) {
             helpers.log('REPAYING DEBT FROM MATCHING TOKEN IN WALLET');
             const token = tokens['wallet'][debtSymbol];
-            tokens = await _this.repayDebt(pool, tokens, token, 'wallet', liquidationHealthTarget);
+            tokens = await _this.repayDebt(pool, tokens, token, 'wallet', maxLeverage, liquidationHealthTarget);
 
             // Exit if our debt is suffiently paid off
-            if(_this.isDebtSufficientlyRepaid(tokens, liquidationHealthTarget) === true) return tokens;
+            if(_this.isDebtSufficientlyRepaid(tokens, maxLeverage, liquidationHealthTarget) === true) return tokens;
     }
 
     // If we're here then our debt is not paid off
@@ -43,25 +45,25 @@ exports.reduceDebt = async (pool, tokens, liquidationHealthTarget = null) => {
         if (tokenSymbol !== debtSymbol) {
             helpers.log('REPAYING DEBT FROM NON-MATCHING TOKEN IN WALLET');
             const token = tokens['wallet'][tokenSymbol];
-            tokens = await _this.repayDebt(pool, tokens, token, 'wallet', liquidationHealthTarget);
+            tokens = await _this.repayDebt(pool, tokens, token, 'wallet', maxLeverage, liquidationHealthTarget);
 
             // Exit if our debt is suffiently paid off
-            if(_this.isDebtSufficientlyRepaid(tokens, liquidationHealthTarget) === true) return tokens;
+            if(_this.isDebtSufficientlyRepaid(tokens, maxLeverage, liquidationHealthTarget) === true) return tokens;
         }
     }
     
     // If we're here then our debt is not paid off
     // Now we'll start selling supply tokens to pay more debt
-    while (_this.isDebtSufficientlyRepaid(tokens, liquidationHealthTarget) === false) {
+    while (_this.isDebtSufficientlyRepaid(tokens, maxLeverage, liquidationHealthTarget) === false) {
         
         // Loop through our supply tokens
         for (const supplyTokenSymbol in tokens['aave']['supply']) {
             helpers.log('REPAYING DEBT FROM SUPPLY');
             const supplyToken = tokens['aave']['supply'][supplyTokenSymbol];
-            tokens = await _this.repayDebt(pool, tokens, supplyToken, 'supply', liquidationHealthTarget);
+            tokens = await _this.repayDebt(pool, tokens, supplyToken, 'supply', maxLeverage, _this.liquidationHealthFloor);
 
             // Exit if our debt is suffiently paid off
-            if(_this.isDebtSufficientlyRepaid(tokens, liquidationHealthTarget) === true) return tokens;
+            if(_this.isDebtSufficientlyRepaid(tokens, maxLeverage, liquidationHealthTarget) === true) return tokens;
         }
     }
 
@@ -75,13 +77,14 @@ exports.reduceDebt = async (pool, tokens, liquidationHealthTarget = null) => {
  * @param {Object} tokens A list of wallet and aave tokens with balances
  * @param {Object} token A token with balance details
  * @param {String} sourceOfFunds wallet or supply
+ * @param {Float} maxLeverage The leverage target to reach before quitting. Defaults to `5`.
  * @param {Float} liquidationHealthTarget Target liquidation health. Defaults to `null`.
  * @returns {Promise<Object>} A list of wallet and aave tokens with updated balances
  */
-exports.repayDebt = async (pool, tokens, repaymentToken, sourceOfFunds = 'wallet', liquidationHealthTarget = null) => {
+exports.repayDebt = async (pool, tokens, repaymentToken, sourceOfFunds = 'wallet', maxLeverage = _this.maxLeverage, liquidationHealthTarget = null) => {
     const debtSymbol = _.keys(tokens['aave']['variable-debt'])[0];
     const debtToken = tokens['aave']['variable-debt'][debtSymbol];
-    const repaymentTarget = _this.getDebtAdjustmentAmount(tokens, sourceOfFunds, liquidationHealthTarget);
+    const repaymentTarget = _this.getDebtAdjustmentAmount(tokens, sourceOfFunds, maxLeverage, liquidationHealthTarget);
 
     // Try to repay as much debt as possible using this token            
     let debtToRepayUsd = _.min([repaymentTarget, repaymentToken.balanceUsd]);
@@ -91,18 +94,18 @@ exports.repayDebt = async (pool, tokens, repaymentToken, sourceOfFunds = 'wallet
     if (debtToRepayUsd <= 0) return tokens;
 
     if (sourceOfFunds === 'supply') {
-            const maxSafeSupplyWithdraw = _this.getMaxSafeSupplyWithdraw(
-                tokens['aave'].supplyBalanceUsd, 
-                tokens['aave'].debtBalanceUsd, 
-                tokens['aave'].liquidationThreshold
-            );
+        const maxSafeSupplyWithdraw = _this.getMaxSafeSupplyWithdraw(
+            tokens['aave'].supplyBalanceUsd, 
+            tokens['aave'].debtBalanceUsd, 
+            tokens['aave'].liquidationThreshold
+        );
 
-            // Try to repay as much debt as possible
-            debtToRepayUsd = _.min([repaymentTarget, maxSafeSupplyWithdraw, repaymentToken.balanceUsd]);
-            debtToRepayInt = _this.tokenIntFromUsdAmount(repaymentToken, debtToRepayUsd);
+        // Try to repay as much debt as possible
+        debtToRepayUsd = _.min([repaymentTarget, maxSafeSupplyWithdraw, repaymentToken.balanceUsd]);
+        debtToRepayInt = _this.tokenIntFromUsdAmount(repaymentToken, debtToRepayUsd);
 
-            // Check to ensure we don't have a calculation mistake
-            if (debtToRepayUsd <= 0) return tokens;
+        // Check to ensure we don't have a calculation mistake
+        if (debtToRepayUsd <= 0) return tokens;
 
         // WITHDRAW SUPPLY
         helpers.log('Withdrawing $' + debtToRepayUsd + ' worth of ' + repaymentToken.symbol + ' from AAVE');
@@ -133,68 +136,83 @@ exports.repayDebt = async (pool, tokens, repaymentToken, sourceOfFunds = 'wallet
     return tokens;
 }
 
-// /**
-//  * Increase Debt
-//  * 
-//  * @param {Pool} pool A dHedge Pool object
-//  * @param {Object} tokens A list of wallet and aave token balances
-//  * @param {Float} leverageTarget The leverage target to reach before quitting.
-//  * @param {Float} liquidationHealthTarget The liquidation health target to reach before quitting.
-//  * @returns {Promise<Object>} Updated wallet and aave balances
-//  */
-// exports.increaseDebt = async (pool, tokens, leverageTarget, liquidationHealthTarget = _this.liquidationHealthTargetCeiling) => {
-//     // Check to see if we have room to take on more debt
-//     if (tokens['aave']['supplyBalanceUsd'] <= 0
-//         && tokens['aave']['liquidationHealth'] > _this.liquidationHealthFloor) {
-//             helpers.log('We need more collateral supplied before we can take on new debt.');
-//             return tokens;
-//     }
-    
-//     // Get the debt token symbol
-//     const debtSymbol = _.keys(tokens['aave']['variable-debt'])[0];
+/**
+ * Is it Safe to Borrow?
+ * 
+ * @param {Object} tokens A list of wallet and aave token balances.
+ * @param {Float} maxLeverage The leverage target to reach before quitting. Defaults to `5`.
+ * @param {Float} liquidationHealthTarget The liquidation health target to reach before quitting.
+ * @returns {Boolean} `True` if yes, `false` if no.
+ */
+exports.isSafeToBorrow = (
+    tokens, 
+    maxLeverage = _this.maxLeverage, 
+    liquidationHealthTarget = _this.liquidationHealthTargetCeiling
+    ) => {
+        if (tokens['aave']['liquidationHealth'] === null
+            || (tokens['aave']['leverage'] < maxLeverage
+                && tokens['aave']['liquidationHealth'] > liquidationHealthTarget)
+            ) {
+                return true;
+        }
 
-//     // Try to pay down our debt from any debt tokens in our wallet
-//     // This step may save us from doing swap transactions
-//     if (tokens['wallet'][debtSymbol] !== undefined
-//         && tokens['wallet'][debtSymbol].balanceInt > 0) {
-//             helpers.log('REPAYING DEBT FROM MATCHING TOKEN IN WALLET');
-//             const token = tokens['wallet'][debtSymbol];
-//             tokens = await _this.repayDebt(pool, tokens, token, 'wallet', liquidationHealthTarget);
+        return false;
+}
 
-//             // Exit if our debt is suffiently paid off
-//             if(_this.isDebtSufficientlyRepaid(tokens, liquidationHealthTarget) === true) return tokens;
-//     }
+/**
+ * Increase Debt
+ * 
+ * @param {Pool} pool A dHedge Pool object
+ * @param {Object} tokens A list of wallet and aave token balances
+ * @param {String} shortSymbol A symbol for the short token
+ * @param {String} longSymbol A symbol for the long token
+ * @param {Float} maxLeverage The leverage target to reach before quitting. Defaults to `5`.
+ * @param {Float} liquidationHealthTarget The liquidation health target to reach before quitting.
+ * @returns {Promise<Object>} Updated wallet and aave balances
+ */
+exports.increaseDebt = async (
+    pool, 
+    tokens, 
+    shortSymbol,
+    longSymbol,
+    maxLeverage = _this.maxLeverage, 
+    liquidationHealthTarget = _this.liquidationHealthTargetCeiling
+    ) => {
+        // Check to see if we have room to take on more debt
+        while (_this.isSafeToBorrow(tokens, maxLeverage, liquidationHealthTarget) === true) {
 
-//     // If we're here then our debt is not paid off
-//     // Now we'll go through the rest of our wallet tokens to pay more debt
-//     for (const tokenSymbol in tokens['wallet']) {
-//         if (tokenSymbol !== debtSymbol) {
-//             helpers.log('REPAYING DEBT FROM NON-MATCHING TOKEN IN WALLET');
-//             const token = tokens['wallet'][tokenSymbol];
-//             tokens = await _this.repayDebt(pool, tokens, token, 'wallet', liquidationHealthTarget);
+            // Calculate max debt to borrow
+            const maxLtv = tokens['aave']['liquidationThreshold'] - 0.07;
+            const maxDebtBasedOnLtv = (tokens['aave']['supplyBalanceUsd'] * maxLtv) - tokens['aave']['debtBalanceUsd'];
+            const maxDebtBasedOnMaxLeverage = ((tokens['aave']['supplyBalanceUsd'] - tokens['aave']['debtBalanceUsd']) * maxLeverage) - tokens['aave']['supplyBalanceUsd'];
+            const debtToBorrowUsd = _.min([maxDebtBasedOnLtv, maxDebtBasedOnMaxLeverage]);
 
-//             // Exit if our debt is suffiently paid off
-//             if(_this.isDebtSufficientlyRepaid(tokens, liquidationHealthTarget) === true) return tokens;
-//         }
-//     }
-    
-//     // If we're here then our debt is not paid off
-//     // Now we'll start selling supply tokens to pay more debt
-//     while (_this.isDebtSufficientlyRepaid(tokens, liquidationHealthTarget) === false) {
-        
-//         // Loop through our supply tokens
-//         for (const supplyTokenSymbol in tokens['aave']['supply']) {
-//             helpers.log('REPAYING DEBT FROM SUPPLY');
-//             const supplyToken = tokens['aave']['supply'][supplyTokenSymbol];
-//             tokens = await _this.repayDebt(pool, tokens, supplyToken, 'supply', liquidationHealthTarget);
+            if (debtToBorrowUsd > 0) {
+                // Get our short token
+                const token = (tokens['wallet'][shortSymbol] === undefined)
+                    ? await dhedge.createNewToken(dhedge.symbolToAddress(shortSymbol, pool.network), 0, pool.network)
+                    : tokens['wallet'][shortSymbol];
+                
+                // Calculate max debt to borrow as int
+                const debtToBorrowInt = _this.tokenIntFromUsdAmount(token, debtToBorrowUsd);
 
-//             // Exit if our debt is suffiently paid off
-//             if(_this.isDebtSufficientlyRepaid(tokens, liquidationHealthTarget) === true) return tokens;
-//         }
-//     }
+                // Borrow max debt
+                helpers.log('Borrowing ~$' + debtToBorrowUsd + ' worth of ' + shortSymbol + ' from AAVE');
+                tokens = await dhedge.borrowDebt(pool, tokens, token.address, debtToBorrowInt);
 
-//     return tokens;
-// }
+                // UniswapV3 into Long tokens
+                helpers.log('Swapping ~$' + debtToBorrowUsd + ' worth of ' + shortSymbol + ' into ' + longSymbol + ' on Uniswap');
+                tokens = await dhedge.tradeUniswap(pool, tokens, token.address, dhedge.symbolToAddress(longSymbol, pool.network), debtToBorrowInt);
+
+                // Lend Long tokens to AAVE
+                const longToken = tokens['wallet'][longSymbol];
+                helpers.log('Lending ~$' + longToken.balanceUsd + ' worth of ' + longSymbol + ' to AAVE supply');
+                tokens = await dhedge.lendDeposit(pool, tokens, longToken.address, longToken.balanceInt);
+            }
+        }
+
+        return tokens;
+}
 
 
 /**
@@ -202,10 +220,11 @@ exports.repayDebt = async (pool, tokens, repaymentToken, sourceOfFunds = 'wallet
  * 
  * @param {Object} tokens A list of wallet and aave tokens with balances
  * @param {String} sourceOfFunds wallet, supply, or debt
+ * @param {Float} maxLeverage The leverage target to reach before quitting. Defaults to `5`.
  * @param {Float} liquidationHealthTarget The liquidation health target. Defaults to `null`.
  * @returns {Float} The amount of USD to adjust the debt by.
  */
-exports.getDebtAdjustmentAmount = (tokens, sourceOfFunds = 'wallet', liquidationHealthTarget = null) => {
+exports.getDebtAdjustmentAmount = (tokens, sourceOfFunds = 'wallet', maxLeverage, liquidationHealthTarget = null) => {
     const overpayBufferMultiple = 1.04;
     let amount = 0;
     
@@ -220,7 +239,13 @@ exports.getDebtAdjustmentAmount = (tokens, sourceOfFunds = 'wallet', liquidation
                     tokens['aave'].debtBalanceUsd, 
                     tokens['aave'].liquidationThreshold, 
                     liquidationHealthTarget,
-                ) * overpayBufferMultiple;
+                );
+
+                if (amount <= 0) {
+                    amount = tokens['aave']['supplyBalanceUsd'] - ((tokens['aave']['supplyBalanceUsd'] - tokens['aave']['debtBalanceUsd']) * maxLeverage);
+                }
+
+                amount *= overpayBufferMultiple;
                 break;
 
             case 'debt':
@@ -257,14 +282,16 @@ exports.getDebtAdjustmentAmount = (tokens, sourceOfFunds = 'wallet', liquidation
  * Is Debt Sufficiently Repaid
  * 
  * @param {Object} tokens A list of wallet and aave tokens with balances
+ * @param {Float} maxLeverage The maximum leverage for borrowing. Defaults to global max leverage target.
  * @param {Float} liquidationHealthTarget The liquidation health target. Defaults to `null`.
  * @returns {Boolean} True if the debt is sufficiently repaid; false if there is more to pay
  */
-exports.isDebtSufficientlyRepaid = (tokens, liquidationHealthTarget = null) => {
+exports.isDebtSufficientlyRepaid = (tokens, maxLeverage = _this.maxLeverage, liquidationHealthTarget = null) => {
     if (_.isEmpty(tokens['aave']['variable-debt'])
         || tokens['aave'].liquidationHealth === null
         || (liquidationHealthTarget !== null
-            && tokens['aave'].liquidationHealth > liquidationHealthTarget)
+            && tokens['aave']['leverage'] <= maxLeverage
+            && tokens['aave'].liquidationHealth >= liquidationHealthTarget)
         ) {
             return true;
     }

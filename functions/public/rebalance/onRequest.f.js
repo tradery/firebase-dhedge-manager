@@ -70,7 +70,7 @@ exports = module.exports = functions
 
                 // And that it's active
                 if (portfolioDoc.data().isActive === false)
-                    throw new Error("This secret is no longer active.");
+                    throw new Error("This secret is not active.");
 
                 // Yay! We're authorized!
                 const { poolContract, network } = portfolioDoc.data();
@@ -80,19 +80,25 @@ exports = module.exports = functions
                 const lastSignal = helpers.snapshotToArray(signalsSnapshot)[0];
                 const longSymbol = lastSignal.data.long;
                 const shortSymbol = lastSignal.data.short;
+                const maxLeverage = (lastSignal.data.maxLeverage === undefined || lastSignal.data.maxLeverage === null)
+                    ? aave.maxLeverage
+                    : lastSignal.data.maxLeverage;
                 
                 helpers.log('Last signal ID: ' + lastSignal.id);
                 helpers.log('Long Token:     ' + longSymbol);
                 helpers.log('Short Token:    ' + shortSymbol);
+                helpers.log('Max Leverage:    ' + maxLeverage);
                 helpers.log('Pool Contract:  ' + poolContract);
 
-                // Check wallet balances with dhedge
-                // @TODO replace mnemonic env with decrypted value from db
+                /**
+                 * @TODO replace mnemonic env with decrypted value from db
+                 */
                 const pool = await dhedge.initPool(
                     process.env.MNEMONIC,
                     poolContract, 
                     network
                 );
+                // Check wallet balances with dhedge
                 let tokens = await dhedge.getBalances(pool);
                 helpers.log(tokens);
 
@@ -151,61 +157,17 @@ exports = module.exports = functions
                         tokens = await dhedge.lendDeposit(pool, tokens, token.address, token.balanceInt);
                     }
                     
-                    // await aave.borrow(shortToken);
+                    // OPTIMIZE BORROWING DEBT
                     helpers.log('This is where we borrow ' + shortSymbol
-                        + ' and swap into ' + longSymbol + ' until we reach target leverage');
-                    // WHILE TARGET LEVERAGE NOT YET REACHED (e.g. 1.75x)
-                        // Calculate max debt to borrow
-                        // Borrow max debt
-                        // UniswapV3 into Long tokens
-                        // Lend Long tokens to AAVE
-                        // Repeat
-
-                    helpers.log('This is where, if needed, we borrow more ' + shortSymbol
-                    + ' and swap into ' + longSymbol + ' until we reach our liquidaton health cieling');
-                    // WHILE LIQUIDATION HEALTH ABOVE TARGET CEILING (e.g. 1.5)
-                        // Calculate max debt to borrow
-                        // Borrow max debt
-                        // UniswapV3 into Long tokens
-                        // Lend Long tokens to AAVE
-                        // Repeat
-
-                    // WHILE SAFE TO...
-                    while (tokens['aave']['liquidationHealth'] === null
-                        || tokens['aave']['liquidationHealth'] > aave.liquidationHealthTargetCeiling) {
-                            
-                            // Calculate max debt to borrow
-                            const debtToBorrowUsd = (tokens['aave']['supplyBalanceUsd'] * (tokens['aave']['liquidationThreshold']-0.07)) - tokens['aave']['debtBalanceUsd'];
-
-                            if (debtToBorrowUsd > 0) {
-                                // Get our short token
-                                const token = (tokens['wallet'][shortSymbol] === undefined)
-                                    ? await dhedge.createNewToken(dhedge.symbolToAddress(shortSymbol, pool.network), 0, pool.network)
-                                    : tokens['wallet'][shortSymbol];
-                                
-                                // Calculate max debt to borrow as int
-                                const debtToBorrowInt = aave.tokenIntFromUsdAmount(token, debtToBorrowUsd);
-
-                                // Borrow max debt
-                                helpers.log('Borrowing ~$' + debtToBorrowUsd + ' worth of ' + shortSymbol + ' from AAVE');
-                                tokens = await dhedge.borrowDebt(pool, tokens, token.address, debtToBorrowInt);
-
-                                // UniswapV3 into Long tokens
-                                helpers.log('Swapping ~$' + debtToBorrowUsd + ' worth of ' + shortSymbol + ' into ' + longSymbol + ' on Uniswap');
-                                tokens = await dhedge.tradeUniswap(pool, tokens, token.address, dhedge.symbolToAddress(longSymbol, pool.network), debtToBorrowInt);
-
-                                // Lend Long tokens to AAVE
-                                const longToken = tokens['wallet'][longSymbol];
-                                helpers.log('Lending ~$' + longToken.balanceUsd + ' worth of ' + longSymbol + ' to AAVE supply');
-                                tokens = await dhedge.lendDeposit(pool, tokens, longToken.address, longToken.balanceInt);
-                            }
-                    }
+                        + ' and swap into ' + longSymbol + ' until we reach target leverage or liquidaton health cieling');
+                    tokens = await aave.increaseDebt(pool, tokens, shortSymbol, longSymbol, maxLeverage, aave.liquidationHealthTargetCeiling);
                     
+                    // OPTIMIZE REPAYING DEBT
                     helpers.log('This is where, if needed, we withdrawl ' + longSymbol
                         + ' and swap into ' + shortSymbol + ' and repay debt until we reach our liquidaton health floor');
-                    tokens = await aave.reduceDebt(pool, tokens, aave.liquidationHealthTargetFloor);
+                    tokens = await aave.reduceDebt(pool, tokens, maxLeverage, aave.liquidationHealthTargetFloor);
 
-                    helpers.log('Now our wallet is empty and AAVE has maxed leverage'
+                    helpers.log('Now our wallet is empty and AAVE has optimized leverage'
                         + ' with ' + longSymbol + ' supplied as collateral for ' + shortSymbol + ' debt');
                 }
 
