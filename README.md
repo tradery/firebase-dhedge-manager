@@ -52,10 +52,9 @@ An API that allows data scientists to effortlessly send trading signals to the d
 - [dHedge SDK v2](https://github.com/dhedge/dhedge-v2-sdk)
 
 ## Known Limitations
-- Singal providers can not set leverage; leverage-targets are defined in code.
 - The dHedge v2 SDK does not yet support automating the whitelisting of wallet addresses on private funds.
 - The dHedge v2 SDK does not yet support ganging multiple function calls into a single transaction.
-- The Mnemonic is saved as an ENV so we can only have one trader for all portfolios. We may want to store in the db as an encrypted value so each portfolio can have different trading accounts.
+- The Mnemonic is saved as an ENV so we can only have one 'trader' for all portfolios. We may want to store in the db as an encrypted value so each portfolio can have different trading accounts.
 - The CoinMarketCap and Zapper API calls do not yet have a defensive [retry strategy](https://github.com/tim-kos/node-retry).
-- Currently we're only supporting pools on Polygon.
+- Currently we're only supporting pools on Polygon, due to the token list in the dhedge lib
 - Signal providers are not notified if signals abruptly stop. There are plans for PagerDuty integration.
