@@ -46,6 +46,7 @@ exports = module.exports = functions
                     secret,
                     longToken,
                     shortToken,
+                    maxLeverage,
                 } = request.body;
 
                 // Return an error if needed
@@ -100,20 +101,26 @@ exports = module.exports = functions
                 if (longToken  === 'MATIC') longToken  = 'WMATIC';
                 if (shortToken === 'MATIC') shortToken = 'WMATIC';
 
+                // Make sure max leverage is usable
+                if (maxLeverage === undefined || isNaN(maxLeverage)) maxLeverage = null;
+
                 // Get the value of the last saved signal
                 const signalsRef = portfolioRef.collection('signals');
                 const signalsSnapshot = await signalsRef.orderBy('createdAt', 'desc').limit(1).get();
                 const lastSignal = helpers.snapshotToArray(signalsSnapshot)[0].data;
 
                 // Check to see if our signals have changed
-                if (lastSignal.long === longToken && lastSignal.short === shortToken) {
-                    // Signals have not changed since the last time they were sent
-                    response.status(200).send({ message: 'Signal received. It has not changed.' });
+                if (lastSignal.long === longToken
+                     && lastSignal.short === shortToken
+                     && lastSignal.maxLeverage === maxLeverage) {
+                        // Signals have not changed since the last time they were sent
+                        response.status(200).send({ message: 'Signal received. It has not changed.' });
                 } else {
                     // Save the new signal
                     await signalsRef.doc().set({
                         long: longToken
                         , short: shortToken
+                        , maxLeverage: maxLeverage
                         , createdAt: FieldValue.serverTimestamp()
                     });
                     
