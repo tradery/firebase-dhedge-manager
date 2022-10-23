@@ -1,5 +1,6 @@
 const functions = require('firebase-functions');
 const { firestore } = require('firebase-admin');
+const FieldValue = firestore.FieldValue;
 
 /**
  * Run when a new transaction is logged in the db

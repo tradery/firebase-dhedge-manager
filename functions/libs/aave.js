@@ -34,7 +34,7 @@ exports.reduceDebt = async (pool, txsRef, tokens, maxLeverage = _this.maxLeverag
         && tokens['wallet'][debtSymbol].balanceUsd >= 0.50) {
             helpers.log('REPAYING DEBT FROM MATCHING TOKEN IN WALLET');
             const token = tokens['wallet'][debtSymbol];
-            tokens = await _this.repayDebt(pool, tokens, token, 'wallet', maxLeverage, liquidationHealthTarget);
+            tokens = await _this.repayDebt(pool, txsRef, tokens, token, 'wallet', maxLeverage, liquidationHealthTarget);
 
             // Exit if our debt is suffiently paid off
             if(_this.isDebtSufficientlyRepaid(tokens, maxLeverage, liquidationHealthTarget) === true) return tokens;
@@ -46,7 +46,7 @@ exports.reduceDebt = async (pool, txsRef, tokens, maxLeverage = _this.maxLeverag
         if (tokenSymbol !== debtSymbol && tokens['wallet'][tokenSymbol].balanceUsd >= 0.50) {
             helpers.log('REPAYING DEBT FROM NON-MATCHING TOKEN IN WALLET');
             const token = tokens['wallet'][tokenSymbol];
-            tokens = await _this.repayDebt(pool, tokens, token, 'wallet', maxLeverage, liquidationHealthTarget);
+            tokens = await _this.repayDebt(pool, txsRef, tokens, token, 'wallet', maxLeverage, liquidationHealthTarget);
 
             // Exit if our debt is suffiently paid off
             if(_this.isDebtSufficientlyRepaid(tokens, maxLeverage, liquidationHealthTarget) === true) return tokens;
@@ -61,7 +61,7 @@ exports.reduceDebt = async (pool, txsRef, tokens, maxLeverage = _this.maxLeverag
         for (const supplyTokenSymbol in tokens['aave']['supply']) {
             helpers.log('REPAYING DEBT FROM SUPPLY');
             const supplyToken = tokens['aave']['supply'][supplyTokenSymbol];
-            tokens = await _this.repayDebt(pool, tokens, supplyToken, 'supply', maxLeverage, _this.liquidationHealthFloor);
+            tokens = await _this.repayDebt(pool, txsRef, tokens, supplyToken, 'supply', maxLeverage, _this.liquidationHealthFloor);
 
             // Exit if our debt is suffiently paid off
             if(_this.isDebtSufficientlyRepaid(tokens, maxLeverage, liquidationHealthTarget) === true) return tokens;
@@ -83,60 +83,67 @@ exports.reduceDebt = async (pool, txsRef, tokens, maxLeverage = _this.maxLeverag
  * @param {Float} liquidationHealthTarget Target liquidation health. Defaults to `null`.
  * @returns {Promise<Object>} A list of wallet and aave tokens with updated balances
  */
-exports.repayDebt = async (pool, txsRef, tokens, repaymentToken, sourceOfFunds = 'wallet', maxLeverage = _this.maxLeverage, liquidationHealthTarget = null) => {
-    const debtSymbol = _.keys(tokens['aave']['variable-debt'])[0];
-    const debtToken = tokens['aave']['variable-debt'][debtSymbol];
-    const repaymentTarget = _this.getDebtAdjustmentAmount(tokens, sourceOfFunds, maxLeverage, liquidationHealthTarget);
+exports.repayDebt = async (
+    pool, 
+    txsRef, 
+    tokens, 
+    repaymentToken, 
+    sourceOfFunds = 'wallet', 
+    maxLeverage = _this.maxLeverage, 
+    liquidationHealthTarget = null) => {
+        const debtSymbol = _.keys(tokens['aave']['variable-debt'])[0];
+        const debtToken = tokens['aave']['variable-debt'][debtSymbol];
+        const repaymentTarget = _this.getDebtAdjustmentAmount(tokens, sourceOfFunds, maxLeverage, liquidationHealthTarget);
 
-    // Try to repay as much debt as possible using this token            
-    let debtToRepayUsd = _.min([repaymentTarget, repaymentToken.balanceUsd]);
-    let debtToRepayInt = _this.tokenIntFromUsdAmount(repaymentToken, debtToRepayUsd);
-
-    // Check to ensure we don't have a calculation mistake
-    if (debtToRepayUsd <= 0) return tokens;
-
-    if (sourceOfFunds === 'supply') {
-        const maxSafeSupplyWithdraw = _this.getMaxSafeSupplyWithdraw(
-            tokens['aave'].supplyBalanceUsd, 
-            tokens['aave'].debtBalanceUsd, 
-            tokens['aave'].liquidationThreshold
-        );
-
-        // Try to repay as much debt as possible
-        debtToRepayUsd = _.min([repaymentTarget, maxSafeSupplyWithdraw, repaymentToken.balanceUsd]);
-        debtToRepayInt = _this.tokenIntFromUsdAmount(repaymentToken, debtToRepayUsd);
+        // Try to repay as much debt as possible using this token            
+        let debtToRepayUsd = _.min([repaymentTarget, repaymentToken.balanceUsd]);
+        let debtToRepayInt = _this.tokenIntFromUsdAmount(repaymentToken, debtToRepayUsd);
 
         // Check to ensure we don't have a calculation mistake
         if (debtToRepayUsd <= 0) return tokens;
 
-        // WITHDRAW SUPPLY
-        helpers.log('Withdrawing $' + debtToRepayUsd + ' worth of ' + repaymentToken.symbol + ' from AAVE');
-        tokens = await dhedge.withdrawLentTokens(pool, txsRef, tokens, repaymentToken.address, debtToRepayInt);
-    }
+        if (sourceOfFunds === 'supply') {
+            const maxSafeSupplyWithdraw = _this.getMaxSafeSupplyWithdraw(
+                tokens['aave'].supplyBalanceUsd, 
+                tokens['aave'].debtBalanceUsd, 
+                tokens['aave'].liquidationThreshold
+            );
 
-    if (repaymentToken.address !== debtToken.address) {
-        // SWAP OUR WALLET TOKEN INTO THE TOKEN THAT MATCHES THE DEBT TOKEN
-        helpers.log(
-            'Swapping ~$' + (dhedge.slippageMultiplier() * debtToRepayUsd)
-            + ' worth of ' + repaymentToken.symbol + ' for ' + debtSymbol + ' on Uniswap'
-        );
-        tokens = await dhedge.tradeUniswap(
-            pool,
-            txsRef, 
-            tokens,
-            repaymentToken.address,
-            debtToken.address,
-            debtToRepayInt
-        );
+            // Try to repay as much debt as possible
+            debtToRepayUsd = _.min([repaymentTarget, maxSafeSupplyWithdraw, repaymentToken.balanceUsd]);
+            debtToRepayInt = _this.tokenIntFromUsdAmount(repaymentToken, debtToRepayUsd);
 
-        debtToRepayInt = _this.tokenIntFromUsdAmount(debtToken, dhedge.slippageMultiplier() * debtToRepayUsd);
-    }
+            // Check to ensure we don't have a calculation mistake
+            if (debtToRepayUsd <= 0) return tokens;
 
-    // REPAY DEBT
-    helpers.log('Repaying $' + debtToRepayUsd + ' worth of ' + debtSymbol + ' on AAVE');
-    tokens = await dhedge.repayDebt(pool, txsRef, tokens, debtToken.address, debtToRepayInt);
+            // WITHDRAW SUPPLY
+            helpers.log('Withdrawing $' + debtToRepayUsd + ' worth of ' + repaymentToken.symbol + ' from AAVE');
+            tokens = await dhedge.withdrawLentTokens(pool, txsRef, tokens, repaymentToken.address, debtToRepayInt);
+        }
 
-    return tokens;
+        if (repaymentToken.address !== debtToken.address) {
+            // SWAP OUR WALLET TOKEN INTO THE TOKEN THAT MATCHES THE DEBT TOKEN
+            helpers.log(
+                'Swapping ~$' + (dhedge.slippageMultiplier() * debtToRepayUsd)
+                + ' worth of ' + repaymentToken.symbol + ' for ' + debtSymbol + ' on Uniswap'
+            );
+            tokens = await dhedge.tradeUniswap(
+                pool,
+                txsRef, 
+                tokens,
+                repaymentToken.address,
+                debtToken.address,
+                debtToRepayInt
+            );
+
+            debtToRepayInt = _this.tokenIntFromUsdAmount(debtToken, dhedge.slippageMultiplier() * debtToRepayUsd);
+        }
+
+        // REPAY DEBT
+        helpers.log('Repaying $' + debtToRepayUsd + ' worth of ' + debtSymbol + ' on AAVE');
+        tokens = await dhedge.repayDebt(pool, txsRef, tokens, debtToken.address, debtToRepayInt);
+
+        return tokens;
 }
 
 /**
