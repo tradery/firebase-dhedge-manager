@@ -30,7 +30,7 @@ exports.reduceDebt = async (pool, tokens, maxLeverage = _this.maxLeverage, liqui
     // Try to pay down our debt from any debt tokens in our wallet
     // This step may save us from doing swap transactions
     if (tokens['wallet'][debtSymbol] !== undefined
-        && tokens['wallet'][debtSymbol].balanceInt > 0) {
+        && tokens['wallet'][debtSymbol].balanceUsd >= 0.50) {
             helpers.log('REPAYING DEBT FROM MATCHING TOKEN IN WALLET');
             const token = tokens['wallet'][debtSymbol];
             tokens = await _this.repayDebt(pool, tokens, token, 'wallet', maxLeverage, liquidationHealthTarget);
@@ -42,7 +42,7 @@ exports.reduceDebt = async (pool, tokens, maxLeverage = _this.maxLeverage, liqui
     // If we're here then our debt is not paid off
     // Now we'll go through the rest of our wallet tokens to pay more debt
     for (const tokenSymbol in tokens['wallet']) {
-        if (tokenSymbol !== debtSymbol) {
+        if (tokenSymbol !== debtSymbol && tokens['wallet'][tokenSymbol].balanceUsd >= 0.50) {
             helpers.log('REPAYING DEBT FROM NON-MATCHING TOKEN IN WALLET');
             const token = tokens['wallet'][tokenSymbol];
             tokens = await _this.repayDebt(pool, tokens, token, 'wallet', maxLeverage, liquidationHealthTarget);
