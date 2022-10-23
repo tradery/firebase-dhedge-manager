@@ -87,7 +87,7 @@ exports = module.exports = functions
                 helpers.log('Last signal ID: ' + lastSignal.id);
                 helpers.log('Long Token:     ' + longSymbol);
                 helpers.log('Short Token:    ' + shortSymbol);
-                helpers.log('Max Leverage:    ' + maxLeverage);
+                helpers.log('Max Leverage:   ' + maxLeverage);
                 helpers.log('Pool Contract:  ' + poolContract);
 
                 /**
