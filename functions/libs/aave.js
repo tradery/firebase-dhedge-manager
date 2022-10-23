@@ -12,12 +12,13 @@ exports.liquidationHealthTargetCeiling = 1.35;
  * Reduce Debt
  * 
  * @param {Pool} pool A dHedge Pool object
+ * @param {Object} txsRef A firestore database reference mapped to `transactions`
  * @param {Object} tokens A list of wallet and aave token balances
  * @param {Float} maxLeverage The leverage target to reach before quitting. Defaults to `5`.
  * @param {Float} liquidationHealthTarget The liquidation health target to reach before quitting; Use `null` to empty all debt.
  * @returns {Promise<Object>} Updated wallet and aave balances
  */
-exports.reduceDebt = async (pool, tokens, maxLeverage = _this.maxLeverage, liquidationHealthTarget = null) => {
+exports.reduceDebt = async (pool, txsRef, tokens, maxLeverage = _this.maxLeverage, liquidationHealthTarget = null) => {
     // Check to see if we have any debt to repay
     if (_this.isDebtSufficientlyRepaid(tokens, maxLeverage, liquidationHealthTarget) === true) {
             helpers.log('We don\'t need to reduce the debt.');
@@ -74,6 +75,7 @@ exports.reduceDebt = async (pool, tokens, maxLeverage = _this.maxLeverage, liqui
  * Repay Debt
  * 
  * @param {Pool} pool A dHedge Pool object
+ * @param {Object} txsRef A firestore database reference mapped to `transactions`
  * @param {Object} tokens A list of wallet and aave tokens with balances
  * @param {Object} token A token with balance details
  * @param {String} sourceOfFunds wallet or supply
@@ -81,7 +83,7 @@ exports.reduceDebt = async (pool, tokens, maxLeverage = _this.maxLeverage, liqui
  * @param {Float} liquidationHealthTarget Target liquidation health. Defaults to `null`.
  * @returns {Promise<Object>} A list of wallet and aave tokens with updated balances
  */
-exports.repayDebt = async (pool, tokens, repaymentToken, sourceOfFunds = 'wallet', maxLeverage = _this.maxLeverage, liquidationHealthTarget = null) => {
+exports.repayDebt = async (pool, txsRef, tokens, repaymentToken, sourceOfFunds = 'wallet', maxLeverage = _this.maxLeverage, liquidationHealthTarget = null) => {
     const debtSymbol = _.keys(tokens['aave']['variable-debt'])[0];
     const debtToken = tokens['aave']['variable-debt'][debtSymbol];
     const repaymentTarget = _this.getDebtAdjustmentAmount(tokens, sourceOfFunds, maxLeverage, liquidationHealthTarget);
@@ -109,7 +111,7 @@ exports.repayDebt = async (pool, tokens, repaymentToken, sourceOfFunds = 'wallet
 
         // WITHDRAW SUPPLY
         helpers.log('Withdrawing $' + debtToRepayUsd + ' worth of ' + repaymentToken.symbol + ' from AAVE');
-        tokens = await dhedge.withdrawLentTokens(pool, tokens, repaymentToken.address, debtToRepayInt);
+        tokens = await dhedge.withdrawLentTokens(pool, txsRef, tokens, repaymentToken.address, debtToRepayInt);
     }
 
     if (repaymentToken.address !== debtToken.address) {
@@ -120,6 +122,7 @@ exports.repayDebt = async (pool, tokens, repaymentToken, sourceOfFunds = 'wallet
         );
         tokens = await dhedge.tradeUniswap(
             pool,
+            txsRef, 
             tokens,
             repaymentToken.address,
             debtToken.address,
@@ -131,7 +134,7 @@ exports.repayDebt = async (pool, tokens, repaymentToken, sourceOfFunds = 'wallet
 
     // REPAY DEBT
     helpers.log('Repaying $' + debtToRepayUsd + ' worth of ' + debtSymbol + ' on AAVE');
-    tokens = await dhedge.repayDebt(pool, tokens, debtToken.address, debtToRepayInt);
+    tokens = await dhedge.repayDebt(pool, txsRef, tokens, debtToken.address, debtToRepayInt);
 
     return tokens;
 }
@@ -163,6 +166,7 @@ exports.isSafeToBorrow = (
  * Increase Debt
  * 
  * @param {Pool} pool A dHedge Pool object
+ * @param {Object} txsRef A firestore database reference mapped to `transactions`
  * @param {Object} tokens A list of wallet and aave token balances
  * @param {String} shortSymbol A symbol for the short token
  * @param {String} longSymbol A symbol for the long token
@@ -172,6 +176,7 @@ exports.isSafeToBorrow = (
  */
 exports.increaseDebt = async (
     pool, 
+    txsRef, 
     tokens, 
     shortSymbol,
     longSymbol,
@@ -198,16 +203,16 @@ exports.increaseDebt = async (
 
                 // Borrow max debt
                 helpers.log('Borrowing ~$' + debtToBorrowUsd + ' worth of ' + shortSymbol + ' from AAVE');
-                tokens = await dhedge.borrowDebt(pool, tokens, token.address, debtToBorrowInt);
+                tokens = await dhedge.borrowDebt(pool, txsRef, tokens, token.address, debtToBorrowInt);
 
                 // UniswapV3 into Long tokens
                 helpers.log('Swapping ~$' + debtToBorrowUsd + ' worth of ' + shortSymbol + ' into ' + longSymbol + ' on Uniswap');
-                tokens = await dhedge.tradeUniswap(pool, tokens, token.address, dhedge.symbolToAddress(longSymbol, pool.network), debtToBorrowInt);
+                tokens = await dhedge.tradeUniswap(pool, txsRef, tokens, token.address, dhedge.symbolToAddress(longSymbol, pool.network), debtToBorrowInt);
 
                 // Lend Long tokens to AAVE
                 const longToken = tokens['wallet'][longSymbol];
                 helpers.log('Lending ~$' + longToken.balanceUsd + ' worth of ' + longSymbol + ' to AAVE supply');
-                tokens = await dhedge.lendDeposit(pool, tokens, longToken.address, longToken.balanceInt);
+                tokens = await dhedge.lendDeposit(pool, txsRef, tokens, longToken.address, longToken.balanceInt);
             }
         }
 

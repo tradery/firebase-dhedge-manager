@@ -54,6 +54,9 @@ exports = module.exports = functions
                 const portfoliosRef = db.collection('portfolios');
                 const portfolioRef = portfoliosRef.doc(secret);
                 const portfolioDoc = await portfolioRef.get();
+                
+                // Get the transactions collection for logging
+                const txsRef = portfolioDoc.collection('transactions');
 
                 // Make sure we have a valid portfolio
                 if (portfolioDoc.data() === undefined)
@@ -79,7 +82,7 @@ exports = module.exports = functions
                 /**
                  * @TODO Store spending approvals in the db so we don't waste gas
                  */
-                await dhedge.approveAllSpendingOnce(pool);
+                await dhedge.approveAllSpendingOnce(pool, txsRef);
                 
                 // Respond
                 response.status(200).send({ message: 'Success'});

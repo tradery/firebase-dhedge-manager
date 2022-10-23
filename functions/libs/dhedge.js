@@ -152,11 +152,11 @@ exports.addressToTokenDetails = async (address, network = 'polygon') => {
  * @param {Float} tokenPriceUsd The USD price of a token to convert the big number
  * @returns {Object} A list of balances in different formats
  */
-exports.getBalanceInfo = (amount, decimals, tokenPriceUsd) => {
+exports.getBalanceInfo = (amount, decimals, tokenPriceUsd = null) => {
     const amountBn = ethers.BigNumber.from(amount.toString());
     const balanceDecimal = parseFloat(ethers.utils.formatUnits(amountBn, decimals));
     const balanceInt = _this.decimalToInteger(balanceDecimal, decimals);
-    const balanceUsd = tokenPriceUsd * balanceDecimal;
+    const balanceUsd = (tokenPriceUsd === null) ? null : tokenPriceUsd * balanceDecimal;
     return {
         balanceBn: amountBn,
         balanceDecimal: balanceDecimal,
@@ -190,6 +190,7 @@ exports.slippageMultiplier = (slippagePadding = _this.swapSlippageTolerance) => 
 /**
  * Update Balances
  * 
+ * @param {Object} db A firestore database instance
  * @param {Object} tokens An object with wallet and aave tokens
  * @param {String} instruction lend, borrow, repay, withdraw, swap
  * @param {Integer} changeInAmount The amount to change the tokens by. Must be ethers.BigNumber friendly
@@ -200,6 +201,7 @@ exports.slippageMultiplier = (slippagePadding = _this.swapSlippageTolerance) => 
  * @returns {Promise<Object>} An object with wallet and aave tokens that have updated balances
  */
 exports.updateBalances = async (
+    db,
     tokens, 
     instruction, 
     changeInAmount, 
@@ -436,6 +438,7 @@ exports.updateTokenBalance = (token, integerChange) => {
  * Trade on Uniswap
  * 
  * @param {Pool} pool A dHedge pool object
+ * @param {Object} txsRef A firestore database reference mapped to `transactions`
  * @param {Object} tokens An object with wallet and aave token balances
  * @param {String} addressFrom The token contract address we're swapping from
  * @param {String} addressTo The token contract address we're swapping to
@@ -446,6 +449,7 @@ exports.updateTokenBalance = (token, integerChange) => {
  */
 exports.tradeUniswap = async (
         pool,
+        txsRef,
         tokens,
         addressFrom, 
         addressTo, 
@@ -465,6 +469,7 @@ exports.tradeUniswap = async (
             _this.gasInfo
         );
         helpers.log(tx);
+        await _this.logTransaction(txsRef, tx, Dapp.UNISWAPV3, 'swap', pool.network, addressFrom, tokens, amountOfFromToken, addressTo);
 
         return await _this.updateBalances(
             tokens, 
@@ -481,6 +486,7 @@ exports.tradeUniswap = async (
  * Trade (not Uniswap)
  * 
  * @param {Pool} pool A dHedge pool object
+ * @param {Object} txsRef A firestore database reference mapped to `transactions`
  * @param {Object} tokens An object with wallet and aave token balances
  * @param {String} addressFrom The token contract address we're swapping from
  * @param {String} addressTo The token contract address we're swapping to
@@ -491,6 +497,7 @@ exports.tradeUniswap = async (
  */
  exports.trade = async (
     pool,
+    txsRef,
     tokens,
     addressFrom, 
     addressTo, 
@@ -518,7 +525,7 @@ exports.tradeUniswap = async (
         slippageTolerance,
         _this.gasInfo
     );
-    helpers.log(tx);
+    await _this.logTransaction(txsRef, tx, router, 'swap', pool.network, addressFrom, tokens, amountOfFromToken, addressTo);
 
     return await _this.updateBalances(
         tokens, 
@@ -535,12 +542,13 @@ exports.tradeUniswap = async (
  * Lend Deposit to AAVE
  * 
  * @param {Pool} pool A dHedge pool object
+ * @param {Object} txsRef A firestore database reference mapped to `transactions`
  * @param {Object} tokens An object with wallet and aave token balances
  * @param {String} address A token's contract address
  * @param {Number} amount Amount to lend, in format compatible with ethers.BigNumber
  * @returns {Promise<Object>} An object with updated wallet and aave token balances
  */
-exports.lendDeposit = async (pool, tokens, address, amount) => {
+exports.lendDeposit = async (pool, txsRef, tokens, address, amount) => {
     helpers.log('LEND DEPOSIT TO AAVE V2');
     await helpers.delay(3);
 
@@ -551,7 +559,7 @@ exports.lendDeposit = async (pool, tokens, address, amount) => {
         0,
         _this.gasInfo
     );
-    helpers.log(tx);
+    await _this.logTransaction(txsRef, tx, Dapp.AAVE, 'lend', pool.network, address, tokens, amount);
 
     return await _this.updateBalances(tokens, 'lend', amount, address);
 }
@@ -560,12 +568,13 @@ exports.lendDeposit = async (pool, tokens, address, amount) => {
  * Borrow Debt from AAVE
  * 
  * @param {Pool} pool A dHedge pool object
+ * @param {Object} txsRef A firestore database reference mapped to `transactions`
  * @param {Object} tokens An object with wallet and aave token balances
  * @param {String} address A token's contract address
  * @param {Number} amount Amount to borrow, in format compatible with ethers.BigNumber
  * @returns {Promise<Object>} An object with updated wallet and aave token balances
  */
-exports.borrowDebt = async (pool, tokens, address, amount) => {
+exports.borrowDebt = async (pool, txsRef, tokens, address, amount) => {
     helpers.log('BORROW TOKENS FROM AAVE V2');
     await helpers.delay(3);
 
@@ -576,7 +585,7 @@ exports.borrowDebt = async (pool, tokens, address, amount) => {
         0,
         _this.gasInfo
     );
-    helpers.log(tx);
+    await _this.logTransaction(txsRef, tx, Dapp.AAVE, 'borrow', pool.network, address, tokens, amount);
 
     return await _this.updateBalances(tokens, 'borrow', amount, address);
 }
@@ -585,12 +594,13 @@ exports.borrowDebt = async (pool, tokens, address, amount) => {
  * Repay Debt to AAVE
  * 
  * @param {Pool} pool A dHedge pool object
+ * @param {Object} txsRef A firestore database reference mapped to `transactions`
  * @param {Object} tokens An object with wallet and aave token balances
  * @param {String} address A token's contract address
  * @param {Number} amount Amount to repay, in format compatible with ethers.BigNumber
  * @returns {Promise<Object>} An object with updated wallet and aave token balances
  */
-exports.repayDebt = async (pool, tokens, address, amount) => {
+exports.repayDebt = async (pool, txsRef, tokens, address, amount) => {
     helpers.log('REPAY DEBT ON AAVE V2');
     await helpers.delay(3);
 
@@ -600,7 +610,7 @@ exports.repayDebt = async (pool, tokens, address, amount) => {
         amount.toString(),
         _this.gasInfo
     );
-    helpers.log(tx);
+    await _this.logTransaction(txsRef, tx, Dapp.AAVE, 'repay', pool.network, address, tokens, amount);
     
     return await _this.updateBalances(tokens, 'repay', amount, address);
 }
@@ -609,12 +619,13 @@ exports.repayDebt = async (pool, tokens, address, amount) => {
  * Withdraw Debt from AAVE
  * 
  * @param {Pool} pool A dHedge pool object
+ * @param {Object} txsRef A firestore database reference mapped to `transactions`
  * @param {Object} tokens An object with wallet and aave token balances
  * @param {String} address A token's contract address
  * @param {Number} amount Amount to withdraw, in format compatible with ethers.BigNumber
  * @returns {Promise<Object>} An object with updated wallet and aave token balances
  */
-exports.withdrawLentTokens = async (pool, tokens, address, amount) => {
+exports.withdrawLentTokens = async (pool, txsRef, tokens, address, amount) => {
     helpers.log('WITHDRAW LENT TOKENS FROM AAVE V2');
     await helpers.delay(3);
 
@@ -624,7 +635,7 @@ exports.withdrawLentTokens = async (pool, tokens, address, amount) => {
         amount.toString(), 
         _this.gasInfo
     );
-    helpers.log(tx);
+    await _this.logTransaction(txsRef, tx, Dapp.AAVE, 'withdraw', pool.network, address, tokens, amount);
 
     return await _this.updateBalances(tokens, 'withdraw', amount, address);
 }
@@ -636,15 +647,16 @@ exports.withdrawLentTokens = async (pool, tokens, address, amount) => {
  * on AAVE v2, Uniswap v3, etc.
  * 
  * @param {Pool} pool dHedge Pool object
+ * @param {Object} txsRef A firestore database reference mapped to `transactions`
  * @param {Array} dapps A list of dapps to approve
  * @returns {Promise<Boolean>} Boolean true if successful.
  */
-exports.approveAllSpendingOnce = async (pool, dapps) => {
+exports.approveAllSpendingOnce = async (pool, txsRef, dapps = null) => {
     helpers.log('APPROVING TOKEN USE ON DAPPS');
     
     const assets = await pool.getComposition();
     let dappsToApprove = dapps;
-    if (dappsToApprove === undefined) {
+    if (dappsToApprove === null) {
         dappsToApprove = [
             Dapp.AAVE,
             Dapp.UNISWAPV3,
@@ -665,9 +677,76 @@ exports.approveAllSpendingOnce = async (pool, dapps) => {
                 ethers.constants.MaxInt256,
                 _this.gasInfo
             );
-            helpers.log(tx);
+            await _this.logTransaction(txsRef, tx, dapp, 'approve-spending', pool.network, asset.asset, null, ethers.constants.MaxInt256);
         }
     }
 
     return true;
+}
+
+exports.logTransaction = async (
+    txsRef,
+    tx,
+    dapp,
+    callType, 
+    network, 
+    tokenFromAddress, 
+    tokens = null,
+    amountFromBn = null, 
+    tokenToAddress = null, 
+    ) => {
+        const tokenFromSymbol = _this.addressToSymbol(tokenFromAddress, network);
+        let tokenFrom = tokenTo = amount = null;
+
+        switch(callType) {
+            case 'approve-spending':
+                tokenFrom = _this.tokens[network][tokenFromSymbol];
+                break;
+
+            case 'lend':
+                tokenFrom = tokens['aave']['supply'][tokenFromSymbol];
+                break;
+
+            case 'borrow':
+                tokenFrom = _this.tokens[network][_this.addressToSymbol(tokenFromAddress, network)];
+                break;
+
+            case 'repay':
+                tokenFrom = tokens['wallet'][tokenFromSymbol];
+                break;
+
+            case 'withdraw':
+                tokenFrom = tokens['aave']['supply'][tokenFromSymbol];
+                break;
+
+            case 'swap':
+                tokenFrom = tokens['wallet'][tokenFromSymbol];
+                tokenTo = _this.tokens[network][_this.addressToSymbol(tokenToAddress, network)];
+                break;
+
+            default:
+                tokenFrom = tokenFromAddress;
+                tokenTo = tokenToAddress;
+                break;
+        }
+
+        // Get as much detail as we can about the AMOUNT
+        tokenFromUsdPrice = (tokenFrom.usdPrice === undefined || tokenFrom.usdPrice === null) ? null : tokenFrom.usdPrice
+        const amount = _this.getBalanceInfo(amountFromBn, tokenFrom.decimals, tokenFromUsdPrice);
+
+        // Save the new signal
+        const transaction = await txsRef.doc().set({
+            network: network
+            , method: callType
+            , dapp: dapp
+            , balances: tokens
+            , tokenFrom: tokenFrom
+            , amount: amount
+            , tokenTo: tokenTo
+            , rawTransaction: tx
+        });
+
+        helpers.log(await transaction.get().data());
+
+        return transaction;
 }

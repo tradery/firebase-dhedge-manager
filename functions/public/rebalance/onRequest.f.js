@@ -64,6 +64,9 @@ exports = module.exports = functions
                 const portfolioDoc = await portfolioRef.get();
                 const signalsRef = portfolioRef.collection('signals');
                 
+                // Get the transactions collection for logging
+                const txsRef = portfolioDoc.collection('transactions');
+
                 // Make sure we have a valid portfolio
                 if (portfolioDoc.data() === undefined)
                     throw new Error("Unknown `secret`");
@@ -105,13 +108,13 @@ exports = module.exports = functions
                 // Check our last signal to see what we are long/short
                 if (longSymbol === 'USDC' && shortSymbol === 'USDC') {
                     // REDUCE DEBT
-                    tokens = await aave.reduceDebt(pool, tokens);
+                    tokens = await aave.reduceDebt(pool, txsRef, tokens);
 
                     // WITHDRAW SUPPLY
                     for (const supplyTokenSymbol in tokens['aave']['supply']) {
                         const supplyToken = tokens['aave']['supply'][supplyTokenSymbol];
                         helpers.log('Withdrawing $' + supplyToken.balanceUsd + ' worth of ' + supplyTokenSymbol + ' from AAVE supply');
-                        tokens = await dhedge.withdrawLentTokens(pool, tokens, supplyToken.address, supplyToken.balanceInt);
+                        tokens = await dhedge.withdrawLentTokens(pool, txsRef, tokens, supplyToken.address, supplyToken.balanceInt);
                     }
 
                     // SWAP TO USDC
@@ -119,7 +122,7 @@ exports = module.exports = functions
                         if (tokenSymbol !== 'USDC') {
                             const token = tokens['wallet'][tokenSymbol];
                             helpers.log('Swapping ~$' + token.balanceUsd + ' worth of ' + tokenSymbol + ' into USDC on Uniswap');
-                            tokens = await dhedge.tradeUniswap(pool, tokens, token.address, dhedge.symbolToAddress('USDC', pool.network), token.balanceInt);
+                            tokens = await dhedge.tradeUniswap(pool, txsRef, tokens, token.address, dhedge.symbolToAddress('USDC', pool.network), token.balanceInt);
                         }
                     }
 
@@ -129,7 +132,7 @@ exports = module.exports = functions
                     // REDUCE ANY DEBT THAT DOES !== SHORT SYMBOL
                     const debtSymbol = _.keys(tokens['aave']['variable-debt'])[0];
                     if (debtSymbol !== shortSymbol) {
-                        tokens = await aave.reduceDebt(pool, tokens);
+                        tokens = await aave.reduceDebt(pool, txsRef, tokens);
                     }
 
                     // WITHDRAW ANY SUPPLY THAT DOES !== LONG SYMBOL
@@ -137,7 +140,7 @@ exports = module.exports = functions
                         if (supplyTokenSymbol !== longSymbol) {
                             const supplyToken = tokens['aave']['supply'][supplyTokenSymbol];
                             helpers.log('Withdrawing $' + supplyToken.balanceUsd + ' worth of ' + supplyTokenSymbol + ' from AAVE supply');
-                            tokens = await dhedge.withdrawLentTokens(pool, tokens, supplyToken.address, supplyToken.balanceInt);
+                            tokens = await dhedge.withdrawLentTokens(pool, txsRef, tokens, supplyToken.address, supplyToken.balanceInt);
                         }
                     }
                     
@@ -146,7 +149,7 @@ exports = module.exports = functions
                         if (tokenSymbol !== longSymbol) {
                             const token = tokens['wallet'][tokenSymbol];
                             helpers.log('Swapping ~$' + token.balanceUsd + ' worth of ' + tokenSymbol + ' into ' + longSymbol + ' on Uniswap');
-                            tokens = await dhedge.tradeUniswap(pool, tokens, token.address, dhedge.symbolToAddress(longSymbol, pool.network), token.balanceInt);
+                            tokens = await dhedge.tradeUniswap(pool, txsRef, tokens, token.address, dhedge.symbolToAddress(longSymbol, pool.network), token.balanceInt);
                         }
                     }
                     
@@ -154,18 +157,18 @@ exports = module.exports = functions
                     if (tokens['wallet'][longSymbol] !== undefined) {
                         const token = tokens['wallet'][longSymbol];
                         helpers.log('Lending ~$' + token.balanceUsd + ' worth of ' + longSymbol + ' to AAVE supply');
-                        tokens = await dhedge.lendDeposit(pool, tokens, token.address, token.balanceInt);
+                        tokens = await dhedge.lendDeposit(pool, txsRef, tokens, token.address, token.balanceInt);
                     }
                     
                     // OPTIMIZE BORROWING DEBT
                     helpers.log('This is where we borrow ' + shortSymbol
                         + ' and swap into ' + longSymbol + ' until we reach target leverage or liquidaton health cieling');
-                    tokens = await aave.increaseDebt(pool, tokens, shortSymbol, longSymbol, maxLeverage, aave.liquidationHealthTargetCeiling);
+                    tokens = await aave.increaseDebt(pool, txsRef, tokens, shortSymbol, longSymbol, maxLeverage, aave.liquidationHealthTargetCeiling);
                     
                     // OPTIMIZE REPAYING DEBT
                     helpers.log('This is where, if needed, we withdrawl ' + longSymbol
                         + ' and swap into ' + shortSymbol + ' and repay debt until we reach our liquidaton health floor');
-                    tokens = await aave.reduceDebt(pool, tokens, maxLeverage, aave.liquidationHealthTargetFloor);
+                    tokens = await aave.reduceDebt(pool, txsRef, tokens, maxLeverage, aave.liquidationHealthTargetFloor);
 
                     helpers.log('Now our wallet is empty and AAVE has optimized leverage'
                         + ' with ' + longSymbol + ' supplied as collateral for ' + shortSymbol + ' debt');
