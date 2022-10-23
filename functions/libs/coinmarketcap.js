@@ -1,4 +1,7 @@
+const { firestore } = require('firebase-admin');
+const FieldValue = firestore.FieldValue;
 const fetch = require('node-fetch');
+const helpers = require('./helpers');
 const basepath = 'https://pro-api.coinmarketcap.com/v2/';
 const _this = this;
 
@@ -51,39 +54,6 @@ exports.currencyCodes = async () => {
 }
 
 /**
- * Get the latest price of Bitcoin 
- * 
- * @returns {Float} The current price of Bitcon 
- */
-exports.btcPrice = async () => {
-    const id = 1;
-    const data = await _this.quotes(id);
-    return data[id]['quote']['USD']['price'];
-}
-
-/**
- * Get the latest price of Ethereum 
- * 
- * @returns {Float} The current price of Ethereum 
- */
-exports.ethPrice = async () => {
-    const id = 1027;
-    const data = await _this.quotes(id);
-    return data[id]['quote']['USD']['price'];
-}
-
-/**
- * Get the latest price of Matic 
- * 
- * @returns {Float} The current price of Matic 
- */
-exports.maticPrice = async () => {
-    const id = 3890;
-    const data = await _this.quotes(id);
-    return data[id]['quote']['USD']['price'];
-}
-
-/**
  * Get token price
  * 
  * @parap   {Integer} The CoinMarketCap token ID
@@ -93,6 +63,42 @@ exports.maticPrice = async () => {
     if (id === null) {
         return null;
     }
-    const data = await _this.quotes(id);
-    return (data === undefined) ? null : data[id]['quote']['USD']['price'];
+
+    // Initialize Firebase components
+    const db = firestore();
+
+    // Get the latest price from the db
+    const pricesRef = db.collection('tokenPrices');
+    const pricesSnapshot = await pricesRef.where('id', '==', id).orderBy('createdAt', 'desc').limit(1).get();
+
+    let price = timeDiff = null;
+
+    if (helpers.snapshotToArray(pricesSnapshot)[0] !== undefined) {
+        const lastPrice = helpers.snapshotToArray(pricesSnapshot)[0].data;
+        timeDiff = _this.getDateDifferenceInMinutes(lastPrice.createdAt, Date.now());
+        price = lastPrice.price;
+
+        helpers.log("time difference in minutes: " + timeDiff);
+    }
+
+    if (price === null || timeDiff > 5) {
+        const quoteData = await _this.quotes(id);
+        price = (quoteData === undefined) ? null : quoteData[id]['quote']['USD']['price'];
+        
+        // Save the new price info
+        await pricesRef.doc().set({
+            id: id
+            , priceUsd: price
+            , symbol: quoteData[id]['symbol']
+            , createdAt: FieldValue.serverTimestamp()
+        });
+    }
+    
+    return price;
 }
+
+exports.getDateDifferenceInMinutes = (date1, date2) => {
+    helpers.log(date1 + ' vs ' + date2);
+    const diffInMs = Math.abs(date2 - date1);
+    return diffInMs / (1000 * 60);
+  }
