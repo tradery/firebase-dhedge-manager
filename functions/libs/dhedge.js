@@ -190,7 +190,6 @@ exports.slippageMultiplier = (slippagePadding = _this.swapSlippageTolerance) => 
 /**
  * Update Balances
  * 
- * @param {Object} db A firestore database instance
  * @param {Object} tokens An object with wallet and aave tokens
  * @param {String} instruction lend, borrow, repay, withdraw, swap
  * @param {Integer} changeInAmount The amount to change the tokens by. Must be ethers.BigNumber friendly
@@ -201,7 +200,6 @@ exports.slippageMultiplier = (slippagePadding = _this.swapSlippageTolerance) => 
  * @returns {Promise<Object>} An object with wallet and aave tokens that have updated balances
  */
 exports.updateBalances = async (
-    db,
     tokens, 
     instruction, 
     changeInAmount, 
@@ -635,6 +633,7 @@ exports.withdrawLentTokens = async (pool, txsRef, tokens, address, amount) => {
         amount.toString(), 
         _this.gasInfo
     );
+    // helpers.log(tx);
     await _this.logTransaction(txsRef, tx, Dapp.AAVE, 'withdraw', pool.network, address, tokens, amount);
 
     return await _this.updateBalances(tokens, 'withdraw', amount, address);
@@ -696,7 +695,7 @@ exports.logTransaction = async (
     tokenToAddress = null, 
     ) => {
         const tokenFromSymbol = _this.addressToSymbol(tokenFromAddress, network);
-        let tokenFrom = tokenTo = amount = null;
+        let tokenFrom = tokenTo = null;
 
         switch(callType) {
             case 'approve-spending':
@@ -734,9 +733,31 @@ exports.logTransaction = async (
         tokenFromUsdPrice = (tokenFrom.usdPrice === undefined || tokenFrom.usdPrice === null) ? null : tokenFrom.usdPrice
         const amount = _this.getBalanceInfo(amountFromBn, tokenFrom.decimals, tokenFromUsdPrice);
 
-        // Save the new signal
-        const transaction = await txsRef.doc().set({
+        // CLEAN OUT BIGNUMBERS
+        delete amount.balanceBn;
+        delete tx.maxPriorityFeePerGas;
+        delete tx.maxFeePerGas;
+        delete tx.gasLimit;
+        delete tx.value;
+        delete tx.wait;
+        for (const walletSymbol in tokens['wallet']) {
+            delete tokens['wallet'][walletSymbol].balanceBn
+        }
+        for (const walletSymbol in tokens['aave']['supply']) {
+            delete tokens['aave']['supply'][walletSymbol].balanceBn
+        }
+        for (const walletSymbol in tokens['aave']['variable-debt']) {
+            delete tokens['aave']['variable-debt'][walletSymbol].balanceBn
+        }
+
+        /**
+         * Change this once we support other networks
+         */
+        const basepath = 'https://polygonscan.com/tx/';
+        
+        const data = {
             network: network
+            , url: basepath + tx.hash
             , method: callType
             , dapp: dapp
             , balances: tokens
@@ -744,9 +765,12 @@ exports.logTransaction = async (
             , amount: amount
             , tokenTo: tokenTo
             , rawTransaction: tx
-        });
+        };
 
-        helpers.log(await transaction.get().data());
+        // Save the new signal
+        const transaction = await txsRef.doc().set(data);
+
+        helpers.log(data);
 
         return transaction;
 }
