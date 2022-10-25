@@ -1,4 +1,5 @@
 const functions = require('firebase-functions');
+const { firestore } = require('firebase-admin');
 const util = require('util');
 const delay = require('delay');
 const _this = this;
@@ -76,4 +77,13 @@ exports.snapshotToArray = (snapshot) => {
         functions.logger.error(error);
         return null;
     }
+}
+
+exports.getFirestoreUtcTimestamp = () => {
+    // Calculate the timestamp
+    const now = new Date();
+    const utcMilllisecondsSinceEpoch = now.getTime() + (now.getTimezoneOffset() * 60 * 1000);
+    const utcSecondsSinceEpoch = Math.round(utcMilllisecondsSinceEpoch / 1000);
+    const timestamp = new firestore.Timestamp(utcSecondsSinceEpoch, 0);
+    return timestamp;
 }

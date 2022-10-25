@@ -1,6 +1,5 @@
 const functions = require('firebase-functions');
 const { firestore } = require('firebase-admin');
-const FieldValue = firestore.FieldValue;
 const cors = require('cors')({ origin: true });
 const fetch = require('node-fetch');
 const helpers = require('../../libs/helpers');
@@ -106,8 +105,17 @@ exports = module.exports = functions
 
                 // Get the value of the last saved signal
                 const signalsRef = portfolioRef.collection('signals');
+                const allSignalsRef = portfolioRef.collection('allSignals');
                 const signalsSnapshot = await signalsRef.orderBy('createdAt', 'desc').limit(1).get();
                 const lastSignal = helpers.snapshotToArray(signalsSnapshot)[0].data;
+
+                // Save the new signal
+                await allSignalsRef.doc().set({
+                    long: longToken
+                    , short: shortToken
+                    , maxLeverage: maxLeverage
+                    , createdAt: helpers.getFirestoreUtcTimestamp()
+                });
 
                 // Check to see if our signals have changed
                 if (lastSignal.long === longToken
@@ -121,7 +129,7 @@ exports = module.exports = functions
                         long: longToken
                         , short: shortToken
                         , maxLeverage: maxLeverage
-                        , createdAt: FieldValue.serverTimestamp()
+                        , createdAt: helpers.getFirestoreUtcTimestamp()
                     });
                     
                     helpers.log(

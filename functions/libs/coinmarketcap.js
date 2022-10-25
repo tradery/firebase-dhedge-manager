@@ -71,10 +71,7 @@ exports.currencyCodes = async () => {
     const pricesSnapshot = await pricesRef.where('coinMarketCapId', '==', id).orderBy('createdAt', 'desc').limit(1).get();
 
     // Calculate the timestamp
-    const now = new Date();
-    const utcMilllisecondsSinceEpoch = now.getTime() + (now.getTimezoneOffset() * 60 * 1000);
-    const utcSecondsSinceEpoch = Math.round(utcMilllisecondsSinceEpoch / 1000);
-    const timestamp = new firestore.Timestamp(utcSecondsSinceEpoch, 0);
+    const timestamp = helpers.getFirestoreUtcTimestamp();
 
     let price = timeDiff = null;
     if (helpers.snapshotToArray(pricesSnapshot)[0] !== undefined) {
