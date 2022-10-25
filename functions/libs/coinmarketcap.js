@@ -1,5 +1,4 @@
 const { firestore } = require('firebase-admin');
-const FieldValue = firestore.FieldValue;
 const fetch = require('node-fetch');
 const helpers = require('./helpers');
 const basepath = 'https://pro-api.coinmarketcap.com/v2/';
@@ -69,36 +68,34 @@ exports.currencyCodes = async () => {
 
     // Get the latest price from the db
     const pricesRef = db.collection('tokenPrices');
-    const pricesSnapshot = await pricesRef.where('id', '==', id).orderBy('createdAt', 'desc').limit(1).get();
+    const pricesSnapshot = await pricesRef.where('coinMarketCapId', '==', id).orderBy('createdAt', 'desc').limit(1).get();
+
+    // Calculate the timestamp
+    const now = new Date();
+    const utcMilllisecondsSinceEpoch = now.getTime() + (now.getTimezoneOffset() * 60 * 1000);
+    const utcSecondsSinceEpoch = Math.round(utcMilllisecondsSinceEpoch / 1000);
+    const timestamp = new firestore.Timestamp(utcSecondsSinceEpoch, 0);
 
     let price = timeDiff = null;
-
     if (helpers.snapshotToArray(pricesSnapshot)[0] !== undefined) {
         const lastPrice = helpers.snapshotToArray(pricesSnapshot)[0].data;
-        timeDiff = _this.getDateDifferenceInMinutes(lastPrice.createdAt, Date.now());
+        const then = lastPrice.createdAt;
+        timeDiff = Math.floor((timestamp - then) / 60);
         price = lastPrice.price;
-
-        helpers.log("time difference in minutes: " + timeDiff);
     }
 
-    if (price === null || timeDiff > 5) {
+    if (price === null || timeDiff > 0) {
         const quoteData = await _this.quotes(id);
         price = (quoteData === undefined) ? null : quoteData[id]['quote']['USD']['price'];
         
         // Save the new price info
         await pricesRef.doc().set({
-            id: id
+            createdAt: timestamp
+            , coinMarketCapId: id
             , priceUsd: price
             , symbol: quoteData[id]['symbol']
-            , createdAt: FieldValue.serverTimestamp()
         });
     }
     
     return price;
 }
-
-exports.getDateDifferenceInMinutes = (date1, date2) => {
-    helpers.log(date1 + ' vs ' + date2);
-    const diffInMs = Math.abs(date2 - date1);
-    return diffInMs / (1000 * 60);
-  }
