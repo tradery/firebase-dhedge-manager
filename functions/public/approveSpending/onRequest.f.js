@@ -55,9 +55,6 @@ exports = module.exports = functions
                 const portfolioRef = portfoliosRef.doc(secret);
                 const portfolioDoc = await portfolioRef.get();
                 
-                // Get the transactions collection for logging
-                const txsRef = portfolioDoc.collection('transactions');
-
                 // Make sure we have a valid portfolio
                 if (portfolioDoc.data() === undefined)
                     throw new Error("Unknown `secret`");
@@ -65,6 +62,9 @@ exports = module.exports = functions
                 // And that it's active
                 if (portfolioDoc.data().isActive === false)
                     throw new Error("This secret is not active.");
+
+                // Get the transactions collection for logging
+                const txsRef = portfolioRef.collection('transactions');
 
                 // Yay! We're authorized!
                 const { poolContract, network } = portfolioDoc.data();
