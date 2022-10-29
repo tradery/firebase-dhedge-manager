@@ -73,7 +73,7 @@ exports = module.exports = functions
                     throw new Error("This secret is not active.");
 
                 // Get the transactions collection for logging
-                const txsRef = portfolioDoc.collection('transactions');
+                const txsRef = portfolioRef.collection('transactions');
 
                 // Yay! We're authorized!
                 const { poolContract, network } = portfolioDoc.data();
