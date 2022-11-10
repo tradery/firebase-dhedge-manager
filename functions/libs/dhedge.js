@@ -755,17 +755,21 @@ exports.logTransaction = async (
          */
         const basepath = 'https://polygonscan.com/tx/';
         
-        const data = {
-            network: network
+        let data = {
+            createdAt: helpers.getFirestoreUtcTimestamp()
+            , network: network
             , url: basepath + tx.hash
             , method: callType
             , dapp: dapp
             , balances: tokens
             , tokenFrom: tokenFrom
             , amount: amount
-            , tokenTo: tokenTo
             , rawTransaction: tx
         };
+
+        if (tokenTo !== null) {
+            data.tokenTo = tokenTo;
+        }
 
         // Save the new signal
         const transaction = await txsRef.doc().set(data);
