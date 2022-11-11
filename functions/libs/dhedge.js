@@ -30,6 +30,18 @@ exports.tokens = {
             coinMarketCapId: 3890,
             aaveLiquidationThreshold: 0.70,
         },
+        LINK: {
+            address:  '0x53E0bca35eC356BD5ddDFebbD1Fc0fD03FaBad39',
+            decimals: 18,
+            coinMarketCapId: 1975,
+            aaveLiquidationThreshold: 0.65,
+        },
+        CRV: {
+            address:  '0x172370d5Cd63279eFa6d502DAB29171933a610AF',
+            decimals: 18,
+            coinMarketCapId: 6538,
+            aaveLiquidationThreshold: 0.45,
+        },
         AAVEV2: {
             address:  '0x8dff5e27ea6b7ac08ebfdf9eb090f32ee9a30fcf',
             decimals: null,
@@ -138,6 +150,7 @@ exports.addressToTokenDetails = async (address, network = 'polygon') => {
                 decimals: token.decimals,
                 usdPrice: usdPrice,
                 liquidationThreshold: token.aaveLiquidationThreshold,
+                coinMarketCapId: token.coinMarketCapId
             };
         }
     }
@@ -466,7 +479,7 @@ exports.tradeUniswap = async (
             slippageTolerance,
             _this.gasInfo
         );
-        helpers.log(tx);
+        // helpers.log(tx);
         await _this.logTransaction(txsRef, tx, Dapp.UNISWAPV3, 'swap', pool.network, addressFrom, tokens, amountOfFromToken, addressTo);
 
         return await _this.updateBalances(
@@ -653,7 +666,6 @@ exports.withdrawLentTokens = async (pool, txsRef, tokens, address, amount) => {
 exports.approveAllSpendingOnce = async (pool, txsRef, dapps = null) => {
     helpers.log('APPROVING TOKEN USE ON DAPPS');
     
-    const assets = await pool.getComposition();
     let dappsToApprove = dapps;
     if (dappsToApprove === null) {
         dappsToApprove = [
@@ -665,18 +677,21 @@ exports.approveAllSpendingOnce = async (pool, txsRef, dapps = null) => {
         ];
     }
 
-    for (const asset of assets) {
+    const tokens = _this.tokens[pool.network];
+    for (const tokenSymbol in tokens) {
+        const token = tokens[tokenSymbol];
+
         for (const dapp of dappsToApprove) {
-            helpers.log('Approving spending of ' + asset.asset + ' on ' + dapp);
+            helpers.log('Approving spending of ' + token.address + ' on ' + dapp);
             await helpers.delay(3);
             
             const tx = await pool.approve(
                 dapp,
-                asset.asset,
+                token.address,
                 ethers.constants.MaxInt256,
                 _this.gasInfo
             );
-            await _this.logTransaction(txsRef, tx, dapp, 'approve-spending', pool.network, asset.asset, null, ethers.constants.MaxInt256);
+            await _this.logTransaction(txsRef, tx, dapp, 'approve-spending', pool.network, token.address, null, ethers.constants.MaxInt256);
         }
     }
 
@@ -703,7 +718,8 @@ exports.logTransaction = async (
                 break;
 
             case 'lend':
-                tokenFrom = tokens['aave']['supply'][tokenFromSymbol];
+                // tokenFrom = tokens['aave']['supply'][tokenFromSymbol];
+                tokenFrom = tokens['wallet'][tokenFromSymbol];
                 break;
 
             case 'borrow':
@@ -720,13 +736,27 @@ exports.logTransaction = async (
 
             case 'swap':
                 tokenFrom = tokens['wallet'][tokenFromSymbol];
-                tokenTo = _this.tokens[network][_this.addressToSymbol(tokenToAddress, network)];
+                
+                tokenTo = (tokens['wallet'][_this.addressToSymbol(tokenFromAddress, network)] === undefined) 
+                    ? await _this.createNewToken(tokenToAddress, amountFromBn, network)
+                    : tokens['wallet'][_this.addressToSymbol(tokenFromAddress, network)];
+                    // : _this.tokens[network][_this.addressToSymbol(tokenToAddress, network)];
+
                 break;
 
             default:
                 tokenFrom = tokenFromAddress;
                 tokenTo = tokenToAddress;
                 break;
+        }
+
+        helpers.log("TOKEN FROM: " + tokenFromSymbol);
+        helpers.log(tokenFrom);
+
+        if (tokenFrom === undefined) {
+            helpers.log("TOKENS LIST: ");
+            helpers.log(tokens);
+            tokenFrom = await _this.createNewToken(tokenFromAddress, amountFromBn, network)
         }
 
         // Get as much detail as we can about the AMOUNT
@@ -740,18 +770,21 @@ exports.logTransaction = async (
         delete tx.gasLimit;
         delete tx.value;
         delete tx.wait;
-        for (const walletSymbol in tokens['wallet']) {
-            delete tokens['wallet'][walletSymbol].balanceBn
-        }
-        for (const walletSymbol in tokens['aave']['supply']) {
-            delete tokens['aave']['supply'][walletSymbol].balanceBn
-        }
-        for (const walletSymbol in tokens['aave']['variable-debt']) {
-            delete tokens['aave']['variable-debt'][walletSymbol].balanceBn
-        }
 
+        if (tokens !== null) {
+            for (const walletSymbol in tokens['wallet']) {
+                delete tokens['wallet'][walletSymbol].balanceBn
+            }
+            for (const walletSymbol in tokens['aave']['supply']) {
+                delete tokens['aave']['supply'][walletSymbol].balanceBn
+            }
+            for (const walletSymbol in tokens['aave']['variable-debt']) {
+                delete tokens['aave']['variable-debt'][walletSymbol].balanceBn
+            }
+        }
+        
         /**
-         * Change this once we support other networks
+         * @todo: change this once we support other networks
          */
         const basepath = 'https://polygonscan.com/tx/';
         
@@ -774,6 +807,7 @@ exports.logTransaction = async (
         // Save the new signal
         const transaction = await txsRef.doc().set(data);
 
+        helpers.log("TRANSACTION DETAILS...");
         helpers.log(data);
 
         return transaction;
