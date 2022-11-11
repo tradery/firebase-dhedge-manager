@@ -53,6 +53,9 @@ exports.reduceDebt = async (pool, txsRef, tokens, maxLeverage = _this.maxLeverag
         }
     }
     
+    /**
+     * @TODO Fix the infinite loop issue when setting max leverage.
+     */
     // If we're here then our debt is not paid off
     // Now we'll start selling supply tokens to pay more debt
     while (_this.isDebtSufficientlyRepaid(tokens, maxLeverage, liquidationHealthTarget) === false) {
@@ -95,9 +98,13 @@ exports.repayDebt = async (
         const debtToken = tokens['aave']['variable-debt'][debtSymbol];
         const repaymentTarget = _this.getDebtAdjustmentAmount(tokens, sourceOfFunds, maxLeverage, liquidationHealthTarget);
 
+        helpers.log("repaymentTarget: " + repaymentTarget);
+
         // Try to repay as much debt as possible using this token            
         let debtToRepayUsd = _.min([repaymentTarget, repaymentToken.balanceUsd]);
         let debtToRepayInt = _this.tokenIntFromUsdAmount(repaymentToken, debtToRepayUsd);
+
+        helpers.log("debtToRepayUsd: " + debtToRepayUsd);
 
         // Check to ensure we don't have a calculation mistake
         if (debtToRepayUsd <= 0) return tokens;
@@ -199,7 +206,7 @@ exports.increaseDebt = async (
             const maxDebtBasedOnMaxLeverage = ((tokens['aave']['supplyBalanceUsd'] - tokens['aave']['debtBalanceUsd']) * maxLeverage) - tokens['aave']['supplyBalanceUsd'];
             const debtToBorrowUsd = _.min([maxDebtBasedOnLtv, maxDebtBasedOnMaxLeverage]);
 
-            if (debtToBorrowUsd > 0) {
+            if (debtToBorrowUsd > 0.20) {
                 // Get our short token
                 const token = (tokens['wallet'][shortSymbol] === undefined)
                     ? await dhedge.createNewToken(dhedge.symbolToAddress(shortSymbol, pool.network), 0, pool.network)
@@ -209,7 +216,8 @@ exports.increaseDebt = async (
                 const debtToBorrowInt = _this.tokenIntFromUsdAmount(token, debtToBorrowUsd);
 
                 // Borrow max debt
-                helpers.log('Borrowing ~$' + debtToBorrowUsd + ' worth of ' + shortSymbol + ' from AAVE');
+                helpers.log('Borrowing ~$' + debtToBorrowUsd + ' (' + debtToBorrowInt + ') worth of ' + shortSymbol + ' from AAVE');
+                helpers.log(token);
                 tokens = await dhedge.borrowDebt(pool, txsRef, tokens, token.address, debtToBorrowInt);
 
                 // UniswapV3 into Long tokens
@@ -229,6 +237,8 @@ exports.increaseDebt = async (
 
 /**
  * Get Debt Adjustment Amount
+ * 
+ * @todo Consider if maxLeverage is needed or if it should be removed.
  * 
  * @param {Object} tokens A list of wallet and aave tokens with balances
  * @param {String} sourceOfFunds wallet, supply, or debt
@@ -254,7 +264,7 @@ exports.getDebtAdjustmentAmount = (tokens, sourceOfFunds = 'wallet', maxLeverage
                 );
 
                 if (amount <= 0) {
-                    amount = tokens['aave']['supplyBalanceUsd'] - ((tokens['aave']['supplyBalanceUsd'] - tokens['aave']['debtBalanceUsd']) * maxLeverage);
+                    amount = tokens['aave']['supplyBalanceUsd'] - ((tokens['aave']['supplyBalanceUsd'] - tokens['aave']['debtBalanceUsd']));
                 }
 
                 amount *= overpayBufferMultiple;

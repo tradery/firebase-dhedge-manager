@@ -101,8 +101,13 @@ exports = module.exports = functions
                 if (shortToken === 'MATIC') shortToken = 'WMATIC';
 
                 // Make sure max leverage is usable
-                if (maxLeverage === undefined || isNaN(maxLeverage)) maxLeverage = null;
-
+                // if (maxLeverage === undefined || isNaN(maxLeverage)) maxLeverage = null;
+                /**
+                 * @todo Test test test the hell out of seeting max leverage.
+                 * Overriding for now.
+                 */
+                maxLeverage = null;
+                
                 // Get the value of the last saved signal
                 const signalsRef = portfolioRef.collection('signals');
                 const allSignalsRef = portfolioRef.collection('allSignals');
