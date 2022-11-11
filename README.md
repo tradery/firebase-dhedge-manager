@@ -15,7 +15,7 @@ An API that allows data scientists to effortlessly send trading signals to the d
 - Run `firebase functions:secrets:set PROVIDER` to set the RPC provider and API key. e.g. https://polygon-mainnet.infura.io/v3/your-code-here
 - Run `firebase functions:secrets:set COIN_MARKET_CAP_API_KEY` to set your CoinMarketCap API key. This enables price lookups.
 - Run `firebase functions:secrets:set ZAPPER_API_KEY` to set your Zapper API key. This enables AAVE portfolio lookups.
-- Run `firebase functions:secrets:set LOCAL_BASEPATH` to set your local basepath for functions. This enables testing our pub/sub functions. e.g. `http://localhost:5002/[project-name]/us-central1/`
+- Run `firebase functions:secrets:set LOCAL_BASEPATH` to set your local basepath for functions. This enables testing our pub/sub functions. e.g. `http://127.0.0.1:5002/[project-name]/us-central1/`
 - Run `firebase functions:secrets:set PRODUCTION_BASEPATH` to set your basepath for functions. This enables our pub/sub functions. e.g. `https://us-central1-[project-name].cloudfunctions.net/`
 
 
