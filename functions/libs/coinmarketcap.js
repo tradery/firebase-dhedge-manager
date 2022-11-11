@@ -56,7 +56,7 @@ exports.currencyCodes = async () => {
  * Get token price
  * 
  * @parap   {Integer} The CoinMarketCap token ID
- * @returns {Float} Just the token price
+ * @returns {Float} The token price in USD
  */
  exports.getUsdPrice = async (id) => {
     if (id === null) {
@@ -78,7 +78,7 @@ exports.currencyCodes = async () => {
         const lastPrice = helpers.snapshotToArray(pricesSnapshot)[0].data;
         const then = lastPrice.createdAt;
         timeDiff = Math.floor((timestamp - then) / 60);
-        price = lastPrice.price;
+        price = lastPrice.priceUsd;
     }
 
     if (price === null || timeDiff > 0) {
