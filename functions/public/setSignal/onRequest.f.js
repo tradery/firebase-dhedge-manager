@@ -112,8 +112,14 @@ exports = module.exports = functions
                 const signalsRef = portfolioRef.collection('signals');
                 const allSignalsRef = portfolioRef.collection('allSignals');
                 const signalsSnapshot = await signalsRef.orderBy('createdAt', 'desc').limit(1).get();
-                const lastSignal = helpers.snapshotToArray(signalsSnapshot)[0].data;
-
+                const lastSignal = (helpers.snapshotToArray(signalsSnapshot).length > 0)
+                    ? helpers.snapshotToArray(signalsSnapshot)[0].data
+                    : {
+                        long: null,
+                        short: null,
+                        maxLeverage: null,
+                    };
+                
                 // Save the new signal
                 await allSignalsRef.doc().set({
                     long: longToken
