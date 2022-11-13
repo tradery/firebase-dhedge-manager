@@ -737,9 +737,9 @@ exports.logTransaction = async (
             case 'swap':
                 tokenFrom = tokens['wallet'][tokenFromSymbol];
                 
-                tokenTo = (tokens['wallet'][_this.addressToSymbol(tokenFromAddress, network)] === undefined) 
+                tokenTo = (tokens['wallet'][_this.addressToSymbol(tokenToAddress, network)] === undefined) 
                     ? await _this.createNewToken(tokenToAddress, amountFromBn, network)
-                    : tokens['wallet'][_this.addressToSymbol(tokenFromAddress, network)];
+                    : tokens['wallet'][_this.addressToSymbol(tokenToAddress, network)];
                     // : _this.tokens[network][_this.addressToSymbol(tokenToAddress, network)];
 
                 break;
