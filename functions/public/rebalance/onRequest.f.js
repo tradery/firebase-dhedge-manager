@@ -101,6 +101,7 @@ exports = module.exports = functions
                     poolContract, 
                     network
                 );
+
                 // Check wallet balances with dhedge
                 let tokens = await dhedge.getBalances(pool);
                 helpers.log(tokens);
@@ -170,7 +171,7 @@ exports = module.exports = functions
                         + ' and swap into ' + shortSymbol + ' and repay debt until we reach our liquidaton health floor');
                     tokens = await aave.reduceDebt(pool, txsRef, tokens, maxLeverage, aave.liquidationHealthTargetFloor);
 
-                    helpers.log('Now our wallet is empty and AAVE has optimized leverage'
+                    helpers.log('Now our wallet should be empty, not counting dust, and AAVE has optimized leverage'
                         + ' with ' + longSymbol + ' supplied as collateral for ' + shortSymbol + ' debt');
                 }
 
