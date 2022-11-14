@@ -567,7 +567,7 @@ exports.lendDeposit = async (pool, txsRef, tokens, address, amount) => {
     // Trying to fix an issue with repeat failed transactions
     const symbol = _this.addressToSymbol(address, pool.network);
     const decimals = _this.tokens[pool.network][symbol].decimals;
-    amount = _this.decimalToInteger(amount * .995, decimals);
+    amount = _this.decimalToInteger(amount * 0.995, decimals);
 
     if (_this.isRepeatedlyFailedTransaction(tsxRef, method, address, amount) === true) {
         const tx = await pool.lend(
