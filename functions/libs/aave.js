@@ -6,7 +6,7 @@ const _this = this;
 exports.maxLeverage = 5;
 exports.liquidationHealthFloor = 1.08;
 exports.liquidationHealthTargetFloor = 1.25;
-exports.liquidationHealthTargetCeiling = 1.35;
+exports.liquidationHealthTargetCeiling = 1.45;
 
 /**
  * Reduce Debt
