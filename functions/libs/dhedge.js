@@ -569,7 +569,7 @@ exports.lendDeposit = async (pool, txsRef, tokens, address, amount) => {
     const decimals = _this.tokens[pool.network][symbol].decimals;
     amount = _this.decimalToInteger(amount * 0.995, decimals);
 
-    if (_this.isRepeatedlyFailedTransaction(tsxRef, method, address, amount) === true) {
+    if (_this.isRepeatedlyFailedTransaction(txsRef, method, address, amount) === true) {
         const tx = await pool.lend(
             Dapp.AAVE, 
             address, 
