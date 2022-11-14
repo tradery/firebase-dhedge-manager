@@ -561,18 +561,29 @@ exports.tradeUniswap = async (
  */
 exports.lendDeposit = async (pool, txsRef, tokens, address, amount) => {
     helpers.log('LEND DEPOSIT TO AAVE V2');
+    const method = 'lend';
     await helpers.delay(3);
 
-    const tx = await pool.lend(
-        Dapp.AAVE, 
-        address, 
-        amount.toString(),
-        0,
-        _this.gasInfo
-    );
-    await _this.logTransaction(txsRef, tx, Dapp.AAVE, 'lend', pool.network, address, tokens, amount);
+    // Trying to fix an issue with repeat failed transactions
+    const symbol = _this.addressToSymbol(address, pool.network);
+    const decimals = _this.tokens[pool.network][symbol].decimals;
+    amount = _this.decimalToInteger(amount * .995, decimals);
 
-    return await _this.updateBalances(tokens, 'lend', amount, address);
+    if (_this.isRepeatedlyFailedTransaction(tsxRef, method, address, amount) === true) {
+        const tx = await pool.lend(
+            Dapp.AAVE, 
+            address, 
+            amount.toString(),
+            0,
+            _this.gasInfo
+        );
+        await _this.logTransaction(txsRef, tx, Dapp.AAVE, method, pool.network, address, tokens, amount);
+    
+        return await _this.updateBalances(tokens, method, amount, address);
+    }
+
+    helpers.log('WE DID NOT TRY THIS TRANSACTION BECAUSE IT PROBABLY WOULD HAVE FAILED.');
+    return tokens;
 }
 
 /**
@@ -698,6 +709,36 @@ exports.approveAllSpendingOnce = async (pool, txsRef, dapps = null) => {
     return true;
 }
 
+/**
+ * Is This a Repeatedly Failed Transaction
+ * 
+ * @param {Object} txsRef A firestore database reference mapped to `transactions`
+ * @param {String} method lend, repay, swap, etc.
+ * @param {String} address A token's contract address
+ * @param {Number} amount Amount to withdraw, in format compatible with ethers.BigNumber
+ */
+exports.isRepeatedlyFailedTransaction = async (txsRef, method, address, amount) => {
+    const transactionsSnapshot = await txsRef.orderBy('createdAt', 'desc').limit(2).get();
+    
+    if (helpers.snapshotToArray(transactionsSnapshot).length > 0) {
+        const lastTransaction = helpers.snapshotToArray(transactionsSnapshot)[0];
+        const secondLastTransaction = helpers.snapshotToArray(transactionsSnapshot)[1];
+
+        if ((lastTransaction.data !== undefined && secondLastTransaction.data !== undefined)
+            && lastTransaction.data.method === method
+            && lastTransaction.data.tokenFrom.address === address
+            && lastTransaction.data.amount.balanceInt === amount
+            && lastTransaction.data.rawTransaction.accessList.data === secondLastTransaction.data.rawTransaction.accessList.data
+            ) {
+                // We've probably failed the last two transactions 
+                // and are trying a third that is the same as the last two
+                return true;
+        }
+    }
+
+    return false;
+}
+
 exports.logTransaction = async (
     txsRef,
     tx,
@@ -718,7 +759,6 @@ exports.logTransaction = async (
                 break;
 
             case 'lend':
-                // tokenFrom = tokens['aave']['supply'][tokenFromSymbol];
                 tokenFrom = tokens['wallet'][tokenFromSymbol];
                 break;
 
@@ -740,7 +780,6 @@ exports.logTransaction = async (
                 tokenTo = (tokens['wallet'][_this.addressToSymbol(tokenToAddress, network)] === undefined) 
                     ? await _this.createNewToken(tokenToAddress, amountFromBn, network)
                     : tokens['wallet'][_this.addressToSymbol(tokenToAddress, network)];
-                    // : _this.tokens[network][_this.addressToSymbol(tokenToAddress, network)];
 
                 break;
 
