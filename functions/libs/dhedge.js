@@ -830,14 +830,14 @@ exports.logTransaction = async (
         
         let data = {
             createdAt: helpers.getFirestoreUtcTimestamp()
-            , network: network
-            , url: basepath + tx.hash
-            , method: callType
-            , dapp: dapp
-            , balances: tokens
-            , tokenFrom: tokenFrom
+            , _method: callType
+            , _url: basepath + tx.hash
             , amount: amount
+            , balances: tokens
+            , dapp: dapp
+            , network: network
             , rawTransaction: tx
+            , tokenFrom: tokenFrom
         };
 
         if (tokenTo !== null) {
