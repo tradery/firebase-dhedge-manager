@@ -803,6 +803,7 @@ exports.logTransaction = async (
         const amount = _this.getBalanceInfo(amountFromBn, tokenFrom.decimals, tokenFromUsdPrice);
 
         // CLEAN OUT BIGNUMBERS
+        delete tokenFrom.balanceBn;
         delete amount.balanceBn;
         delete tx.maxPriorityFeePerGas;
         delete tx.maxFeePerGas;
@@ -840,6 +841,7 @@ exports.logTransaction = async (
         };
 
         if (tokenTo !== null) {
+            delete tokenTo.balanceBn;
             data.tokenTo = tokenTo;
         }
 
