@@ -31,22 +31,40 @@ exports.tokens = {
             aaveLiquidationThreshold: 0.70,
         },
         LINK: {
-            address:  '0x53E0bca35eC356BD5ddDFebbD1Fc0fD03FaBad39',
+            address:  '0x53e0bca35ec356bd5dddfebbd1fc0fd03fabad39',
             decimals: 18,
             coinMarketCapId: 1975,
             aaveLiquidationThreshold: 0.65,
         },
-        CRV: {
-            address:  '0x172370d5Cd63279eFa6d502DAB29171933a610AF',
-            decimals: 18,
-            coinMarketCapId: 6538,
-            aaveLiquidationThreshold: 0.45,
-        },
+        // CRV: {
+        //     address:  '0x172370d5cd63279efa6d502dab29171933a610af',
+        //     decimals: 18,
+        //     coinMarketCapId: 6538,
+        //     aaveLiquidationThreshold: 0,
+        // },
+        // AAVE: {
+        //     address:  '0xd6df932a45c0f255f85145f286ea0b292b21c90b',
+        //     decimals: 18,
+        //     coinMarketCapId: 7278,
+        //     aaveLiquidationThreshold: 0,
+        // },
+        // UNI: {
+        //     address:  '0xb33eaad8d922b1083446dc23f610c2567fb5180f',
+        //     decimals: 18,
+        //     coinMarketCapId: 7083,
+        //     aaveLiquidationThreshold: 0,
+        // },
+        // GRT: {
+        //     address:  '0x5fe2b58c013d7601147dcdd68c143a77499f5531',
+        //     decimals: 18,
+        //     coinMarketCapId: 6719,
+        //     aaveLiquidationThreshold: 0,
+        // },
         AAVEV2: {
             address:  '0x8dff5e27ea6b7ac08ebfdf9eb090f32ee9a30fcf',
             decimals: null,
             coinMarketCapId: null,
-            aaveLiquidationThreshold: null,
+            aaveLiquidationThreshold: 0,
         },
     }
 };
@@ -198,6 +216,10 @@ exports.decimalToInteger = (amount, decimals) => {
  */
 exports.slippageMultiplier = (slippagePadding = _this.swapSlippageTolerance) => {
     return (100 - slippagePadding) / 100;
+}
+
+exports.isActiveOnAave = (symbol, network = 'polygon') => {
+    return (_this.tokens[network][symbol]["aaveLiquidationThreshold"] > 0);
 }
 
 /**
@@ -562,22 +584,23 @@ exports.tradeUniswap = async (
 exports.lendDeposit = async (pool, txsRef, tokens, address, amount) => {
     helpers.log('LEND DEPOSIT TO AAVE V2');
     const method = 'lend';
+    const dapp = Dapp.AAVE;
     await helpers.delay(3);
 
     // Trying to fix an issue with repeat failed transactions
-    const symbol = _this.addressToSymbol(address, pool.network);
-    const decimals = _this.tokens[pool.network][symbol].decimals;
-    amount = _this.decimalToInteger(amount * 0.995, decimals);
+    // const symbol = _this.addressToSymbol(address, pool.network);
+    // const decimals = _this.tokens[pool.network][symbol].decimals;
+    // amount = _this.decimalToInteger(amount * 0.995, decimals);
 
-    if (_this.isRepeatedlyFailedTransaction(txsRef, method, address, amount) === true) {
+    if (await _this.isRepeatedlyFailedTransaction(txsRef, method, address, amount, dapp) === false) {
         const tx = await pool.lend(
-            Dapp.AAVE, 
+            dapp, 
             address, 
             amount.toString(),
             0,
             _this.gasInfo
         );
-        await _this.logTransaction(txsRef, tx, Dapp.AAVE, method, pool.network, address, tokens, amount);
+        await _this.logTransaction(txsRef, tx, dapp, method, pool.network, address, tokens, amount);
     
         return await _this.updateBalances(tokens, method, amount, address);
     }
@@ -693,7 +716,7 @@ exports.approveAllSpendingOnce = async (pool, txsRef, dapps = null) => {
         const token = tokens[tokenSymbol];
 
         for (const dapp of dappsToApprove) {
-            helpers.log('Approving spending of ' + token.address + ' on ' + dapp);
+            helpers.log('Approving spending of ' + tokenSymbol + ' (' + token.address + ') on ' + dapp);
             await helpers.delay(3);
             
             const tx = await pool.approve(
@@ -717,21 +740,24 @@ exports.approveAllSpendingOnce = async (pool, txsRef, dapps = null) => {
  * @param {String} address A token's contract address
  * @param {Number} amount Amount to withdraw, in format compatible with ethers.BigNumber
  */
-exports.isRepeatedlyFailedTransaction = async (txsRef, method, address, amount) => {
-    const transactionsSnapshot = await txsRef.orderBy('createdAt', 'desc').limit(2).get();
+exports.isRepeatedlyFailedTransaction = async (txsRef, method, address, amount, dapp) => {
+    const transactionsSnapshot = await txsRef.orderBy('createdAt', 'desc').limit(3).get();
     
     if (helpers.snapshotToArray(transactionsSnapshot).length > 0) {
-        const lastTransaction = helpers.snapshotToArray(transactionsSnapshot)[0];
-        const secondLastTransaction = helpers.snapshotToArray(transactionsSnapshot)[1];
+        const firstTx  = helpers.snapshotToArray(transactionsSnapshot)[0];
+        const secondTx = helpers.snapshotToArray(transactionsSnapshot)[1];
+        const thirdTx  = helpers.snapshotToArray(transactionsSnapshot)[2];
 
-        if ((lastTransaction.data !== undefined && secondLastTransaction.data !== undefined)
-            && lastTransaction.data.method === method
-            && lastTransaction.data.tokenFrom.address === address
-            && lastTransaction.data.amount.balanceInt === amount
-            && lastTransaction.data.rawTransaction.accessList.data === secondLastTransaction.data.rawTransaction.accessList.data
+        if ((firstTx.data !== undefined && secondTx.data !== undefined && thirdTx.data !== undefined)
+            && firstTx.data._method === method
+            && firstTx.data.dapp === amount
+            && firstTx.data.tokenFrom.address === address
+            && firstTx.data.amount.balanceInt === amount
+            && firstTx.data.rawTransaction.accessList.data === secondTx.data.rawTransaction.accessList.data
+            && firstTx.data.rawTransaction.accessList.data === thirdTx.data.rawTransaction.accessList.data
             ) {
-                // We've probably failed the last two transactions 
-                // and are trying a third that is the same as the last two
+                // We've probably failed the last three transactions 
+                // and are trying a fourth that is the same as the last three
                 return true;
         }
     }

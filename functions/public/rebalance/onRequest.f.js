@@ -127,7 +127,7 @@ exports = module.exports = functions
                         }
                     }
 
-                    helpers.log('Now we should be holding only USDC and have AAVE cleared');
+                    helpers.log('Now we should be holding only USDC and have any AAVE debt cleared');
                     
                 } else {
                     // REDUCE ANY DEBT THAT DOES !== SHORT SYMBOL
@@ -154,25 +154,29 @@ exports = module.exports = functions
                         }
                     }
                     
-                    // LEND ALL LONG TOKENS TO AAVE
-                    if (tokens['wallet'][longSymbol] !== undefined && tokens['wallet'][longSymbol].balanceUsd >= 0.50) {
-                        const token = tokens['wallet'][longSymbol];
-                        helpers.log('Lending ~$' + token.balanceUsd + ' worth of ' + longSymbol + ' to AAVE supply');
-                        tokens = await dhedge.lendDeposit(pool, txsRef, tokens, token.address, token.balanceInt);
-                    }
-                    
-                    // OPTIMIZE BORROWING DEBT
-                    helpers.log('This is where we borrow ' + shortSymbol
-                        + ' and swap into ' + longSymbol + ' until we reach target leverage or liquidaton health cieling');
-                    tokens = await aave.increaseDebt(pool, txsRef, tokens, shortSymbol, longSymbol, maxLeverage, aave.liquidationHealthTargetCeiling);
-                    
-                    // OPTIMIZE REPAYING DEBT
-                    helpers.log('This is where, if needed, we withdrawl ' + longSymbol
-                        + ' and swap into ' + shortSymbol + ' and repay debt until we reach our liquidaton health floor');
-                    tokens = await aave.reduceDebt(pool, txsRef, tokens, maxLeverage, aave.liquidationHealthTargetFloor);
+                    if (dhedge.isActiveOnAave(longSymbol, network) === true
+                        && dhedge.isActiveOnAave(shortSymbol, network) === true) 
+                        {
+                            // LEND ALL APPLICABLE LONG TOKENS TO AAVE
+                            if (tokens['wallet'][longSymbol] !== undefined && tokens['wallet'][longSymbol].balanceUsd >= 0.50) {
+                                const token = tokens['wallet'][longSymbol];
+                                helpers.log('Lending ~$' + token.balanceUsd + ' worth of ' + longSymbol + ' to AAVE supply');
+                                tokens = await dhedge.lendDeposit(pool, txsRef, tokens, token.address, token.balanceInt);
+                            }
+                            
+                            // OPTIMIZE BORROWING DEBT
+                            helpers.log('This is where we borrow ' + shortSymbol
+                                + ' and swap into ' + longSymbol + ' until we reach target leverage or liquidaton health cieling');
+                            tokens = await aave.increaseDebt(pool, txsRef, tokens, shortSymbol, longSymbol, maxLeverage, aave.liquidationHealthTargetCeiling);
+                            
+                            // OPTIMIZE REPAYING DEBT
+                            helpers.log('This is where, if needed, we withdrawl ' + longSymbol
+                                + ' and swap into ' + shortSymbol + ' and repay debt until we reach our liquidaton health floor');
+                            tokens = await aave.reduceDebt(pool, txsRef, tokens, maxLeverage, aave.liquidationHealthTargetFloor);
 
-                    helpers.log('Now our wallet should be empty, not counting dust, and AAVE has optimized leverage'
-                        + ' with ' + longSymbol + ' supplied as collateral for ' + shortSymbol + ' debt');
+                            helpers.log('Now our wallet should be empty, not counting dust, and AAVE has optimized leverage'
+                                + ' with ' + longSymbol + ' supplied as collateral for ' + shortSymbol + ' debt');
+                    }
                 }
 
                 helpers.log(tokens);
