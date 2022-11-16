@@ -491,7 +491,7 @@ exports.tradeUniswap = async (
         const dapp = Dapp.UNISWAPV3;
         await helpers.delay(4);
 
-        if (await _this.isRepeatedlyFailedTransaction(txsRef, method, address, amount, dapp) === true) {
+        if (await _this.isRepeatedlyFailedTransaction(txsRef, method, addressFrom, amountOfFromToken, dapp) === true) {
             helpers.log('WE DID NOT TRY THIS TRANSACTION BECAUSE IT PROBABLY WOULD HAVE FAILED.');
             return tokens;
 
