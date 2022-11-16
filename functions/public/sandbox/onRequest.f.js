@@ -80,8 +80,9 @@ exports = module.exports = functions
                 let tokens = await dhedge.getBalances(pool);
                 // helpers.log(tokens);
 
+                let tx = null; 
                 if (tokens['wallet']['USDC'] !== undefined) {    
-                    await dhedge.lendDeposit(
+                    tx = await dhedge.lendDeposit(
                         pool, 
                         txsRef, 
                         tokens, 
@@ -90,7 +91,7 @@ exports = module.exports = functions
                     );
 
                 } else {
-                    await dhedge.withdrawLentTokens(
+                    tx = await dhedge.withdrawLentTokens(
                         pool, 
                         txsRef, 
                         tokens, 
@@ -99,7 +100,8 @@ exports = module.exports = functions
                     );
                 }
                 
-
+                helpers.log(tx);
+                
                 // Respond
                 response.status(200).send({ message: 'Success'});
 

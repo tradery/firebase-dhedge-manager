@@ -36,12 +36,30 @@ exports.tokens = {
             coinMarketCapId: 1975,
             aaveLiquidationThreshold: 0.65,
         },
-        CRV: {
-            address:  '0x172370d5Cd63279eFa6d502DAB29171933a610AF',
-            decimals: 18,
-            coinMarketCapId: 6538,
-            aaveLiquidationThreshold: 0.45,
-        },
+        // CRV: {
+        //     address:  '0x172370d5cd63279efa6d502dab29171933a610af',
+        //     decimals: 18,
+        //     coinMarketCapId: 6538,
+        //     aaveLiquidationThreshold: 0,
+        // },
+        // AAVE: {
+        //     address:  '0xd6df932a45c0f255f85145f286ea0b292b21c90b',
+        //     decimals: 18,
+        //     coinMarketCapId: 7278,
+        //     aaveLiquidationThreshold: 0,
+        // },
+        // UNI: {
+        //     address:  '0xb33eaad8d922b1083446dc23f610c2567fb5180f',
+        //     decimals: 18,
+        //     coinMarketCapId: 7083,
+        //     aaveLiquidationThreshold: 0,
+        // },
+        // GRT: {
+        //     address:  '0x5fe2b58c013d7601147dcdd68c143a77499f5531',
+        //     decimals: 18,
+        //     coinMarketCapId: 6719,
+        //     aaveLiquidationThreshold: 0,
+        // },
         AAVEV2: {
             address:  '0x8dff5e27ea6b7ac08ebfdf9eb090f32ee9a30fcf',
             decimals: null,
@@ -476,6 +494,11 @@ exports.tradeUniswap = async (
         if (await _this.isRepeatedlyFailedTransaction(txsRef, method, address, amount, dapp) === true) {
             helpers.log('WE DID NOT TRY THIS TRANSACTION BECAUSE IT PROBABLY WOULD HAVE FAILED.');
             return tokens;
+
+            /**
+             * @TODO Consider putting slippage tollerance in the transaction log and adding that to the
+             * failed transaction check. The incrementing it by 20% everytime until the transaction passes.
+             */
         }
             
         const tx = await pool.tradeUniswapV3(
@@ -572,12 +595,12 @@ exports.lendDeposit = async (pool, txsRef, tokens, address, amount) => {
     const dapp = Dapp.AAVE;
     await helpers.delay(4);
 
-    // Trying to fix an issue with repeat failed transactions
-    // const symbol = _this.addressToSymbol(address, pool.network);
-    // const decimals = _this.tokens[pool.network][symbol].decimals;
-    // amount = _this.decimalToInteger(amount * 0.995, decimals);
-
     if (_this.isRepeatedlyFailedTransaction(txsRef, method, address, amount, dapp) === true) {
+        // Trying to fix an issue with repeat failed transactions
+        // const symbol = _this.addressToSymbol(address, pool.network);
+        // const decimals = _this.tokens[pool.network][symbol].decimals;
+        // amount = _this.decimalToInteger(amount * 0.995, decimals);
+        
         helpers.log('WE DID NOT TRY THIS TRANSACTION BECAUSE IT PROBABLY WOULD HAVE FAILED.');
         return tokens;
     }
@@ -727,24 +750,26 @@ exports.approveAllSpendingOnce = async (pool, txsRef, dapps = null) => {
  * @param {String} dapp The dapp we're using
  */
  exports.isRepeatedlyFailedTransaction = async (txsRef, method, address, amount, dapp) => {
-    const transactionsSnapshot = await txsRef.orderBy('createdAt', 'desc').limit(3).get();
-    
-    if (helpers.snapshotToArray(transactionsSnapshot).length > 0) {
-        const firstTx  = helpers.snapshotToArray(transactionsSnapshot)[0];
-        const secondTx = helpers.snapshotToArray(transactionsSnapshot)[1];
-        const thirdTx  = helpers.snapshotToArray(transactionsSnapshot)[2];
+    const transactionsSnapshot = await txsRef.orderBy('createdAt', 'desc').limit(8).get();
+    const transactions = helpers.snapshotToArray(transactionsSnapshot);
+    let counter = 0;
 
-        if ((firstTx.data !== undefined && secondTx.data !== undefined && thirdTx.data !== undefined)
-            && firstTx.data._method === method
-            && firstTx.data.dapp === dapp
-            && firstTx.data.tokenFrom.address === address
-            && firstTx.data.amount.balanceInt === amount
-            && firstTx.data.rawTransaction.accessList.data === secondTx.data.rawTransaction.accessList.data
-            && firstTx.data.rawTransaction.accessList.data === thirdTx.data.rawTransaction.accessList.data
-            ) {
-                // We've probably failed the last three transactions 
-                // and are trying a fourth that is the same as the last three
-                return true;
+    if (transactions.length > 0) {
+
+        for (const transaction of transactions) {
+            if (transaction.data !== undefined
+                && transaction.data._method === method
+                && transaction.data.dapp === dapp
+                && transaction.data.tokenFrom.address === address
+                && transaction.data.amount.balanceInt === amount
+                && transaction.data._status === 'fail')
+                {
+                    counter++;
+                }
+        }
+
+        if (counter >= 3) {
+            return true;
         }
     }
 
