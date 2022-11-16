@@ -473,32 +473,31 @@ exports.tradeUniswap = async (
         const dapp = Dapp.UNISWAPV3;
         await helpers.delay(4);
 
-        if (await _this.isRepeatedlyFailedTransaction(txsRef, method, address, amount, dapp) === false) {
-            
-            const tx = await pool.tradeUniswapV3(
-                addressFrom,
-                addressTo,
-                amountOfFromToken.toString(),
-                feeTier,
-                slippageTolerance,
-                _this.gasInfo
-            );
-            // helpers.log(tx);
-            await _this.logTransaction(txsRef, tx, dapp, method, pool.network, addressFrom, tokens, amountOfFromToken, addressTo);
-
-            return await _this.updateBalances(
-                tokens, 
-                method, 
-                amountOfFromToken, 
-                addressFrom, 
-                addressTo, 
-                pool.network, 
-                slippageTolerance * 1.5
-            );
+        if (await _this.isRepeatedlyFailedTransaction(txsRef, method, address, amount, dapp) === true) {
+            helpers.log('WE DID NOT TRY THIS TRANSACTION BECAUSE IT PROBABLY WOULD HAVE FAILED.');
+            return tokens;
         }
+            
+        const tx = await pool.tradeUniswapV3(
+            addressFrom,
+            addressTo,
+            amountOfFromToken.toString(),
+            feeTier,
+            slippageTolerance,
+            _this.gasInfo
+        );
+        // helpers.log(tx);
+        await _this.logTransaction(txsRef, tx, dapp, method, pool.network, addressFrom, tokens, amountOfFromToken, addressTo);
 
-        helpers.log('WE DID NOT TRY THIS TRANSACTION BECAUSE IT PROBABLY WOULD HAVE FAILED.');
-        return tokens;
+        return await _this.updateBalances(
+            tokens, 
+            method, 
+            amountOfFromToken, 
+            addressFrom, 
+            addressTo, 
+            pool.network, 
+            slippageTolerance * 1.5
+        );
 }
 
 /**
@@ -578,21 +577,21 @@ exports.lendDeposit = async (pool, txsRef, tokens, address, amount) => {
     // const decimals = _this.tokens[pool.network][symbol].decimals;
     // amount = _this.decimalToInteger(amount * 0.995, decimals);
 
-    if (_this.isRepeatedlyFailedTransaction(txsRef, method, address, amount, dapp) === false) {
-        const tx = await pool.lend(
-            dapp, 
-            address, 
-            amount.toString(),
-            0,
-            _this.gasInfo
-        );
-        await _this.logTransaction(txsRef, tx, dapp, method, pool.network, address, tokens, amount);
-    
-        return await _this.updateBalances(tokens, method, amount, address);
+    if (_this.isRepeatedlyFailedTransaction(txsRef, method, address, amount, dapp) === true) {
+        helpers.log('WE DID NOT TRY THIS TRANSACTION BECAUSE IT PROBABLY WOULD HAVE FAILED.');
+        return tokens;
     }
+        
+    const tx = await pool.lend(
+        dapp, 
+        address, 
+        amount.toString(),
+        0,
+        _this.gasInfo
+    );
+    await _this.logTransaction(txsRef, tx, dapp, method, pool.network, address, tokens, amount);
 
-    helpers.log('WE DID NOT TRY THIS TRANSACTION BECAUSE IT PROBABLY WOULD HAVE FAILED.');
-    return tokens;
+    return await _this.updateBalances(tokens, method, amount, address);
 }
 
 /**
