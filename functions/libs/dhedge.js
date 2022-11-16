@@ -578,7 +578,7 @@ exports.lendDeposit = async (pool, txsRef, tokens, address, amount) => {
     // const decimals = _this.tokens[pool.network][symbol].decimals;
     // amount = _this.decimalToInteger(amount * 0.995, decimals);
 
-    if (_this.isRepeatedlyFailedTransaction(txsRef, method, address, amount) === false) {
+    if (_this.isRepeatedlyFailedTransaction(txsRef, method, address, amount, dapp) === false) {
         const tx = await pool.lend(
             dapp, 
             address, 
@@ -727,21 +727,24 @@ exports.approveAllSpendingOnce = async (pool, txsRef, dapps = null) => {
  * @param {Number} amount Amount to withdraw, in format compatible with ethers.BigNumber
  * @param {String} dapp The dapp we're using
  */
-exports.isRepeatedlyFailedTransaction = async (txsRef, method, address, amount, dapp) => {
-    const transactionsSnapshot = await txsRef.orderBy('createdAt', 'desc').limit(2).get();
+ exports.isRepeatedlyFailedTransaction = async (txsRef, method, address, amount, dapp) => {
+    const transactionsSnapshot = await txsRef.orderBy('createdAt', 'desc').limit(3).get();
     
     if (helpers.snapshotToArray(transactionsSnapshot).length > 0) {
-        const lastTransaction = helpers.snapshotToArray(transactionsSnapshot)[0];
-        const secondLastTransaction = helpers.snapshotToArray(transactionsSnapshot)[1];
+        const firstTx  = helpers.snapshotToArray(transactionsSnapshot)[0];
+        const secondTx = helpers.snapshotToArray(transactionsSnapshot)[1];
+        const thirdTx  = helpers.snapshotToArray(transactionsSnapshot)[2];
 
-        if ((lastTransaction.data !== undefined && secondLastTransaction.data !== undefined)
-            && lastTransaction.data.method === method
-            && lastTransaction.data.tokenFrom.address === address
-            && lastTransaction.data.amount.balanceInt === amount
-            && lastTransaction.data.rawTransaction.accessList.data === secondLastTransaction.data.rawTransaction.accessList.data
+        if ((firstTx.data !== undefined && secondTx.data !== undefined && thirdTx.data !== undefined)
+            && firstTx.data._method === method
+            && firstTx.data.dapp === dapp
+            && firstTx.data.tokenFrom.address === address
+            && firstTx.data.amount.balanceInt === amount
+            && firstTx.data.rawTransaction.accessList.data === secondTx.data.rawTransaction.accessList.data
+            && firstTx.data.rawTransaction.accessList.data === thirdTx.data.rawTransaction.accessList.data
             ) {
-                // We've probably failed the last two transactions 
-                // and are trying a third that is the same as the last two
+                // We've probably failed the last three transactions 
+                // and are trying a fourth that is the same as the last three
                 return true;
         }
     }
