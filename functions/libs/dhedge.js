@@ -56,7 +56,7 @@ exports.gasInfo = {
     gasLimit: 10000000
 };
 
-exports.swapSlippageTolerance = 0.5;
+exports.swapSlippageTolerance = 2;
 
 /**
  * Initial dHedge Pool
@@ -469,28 +469,36 @@ exports.tradeUniswap = async (
         feeTier = 500
     ) => {
         helpers.log('SWAP WITH UNISWAP V3');
-        await helpers.delay(3);
+        const method = 'swap';
+        const dapp = Dapp.UNISWAPV3;
+        await helpers.delay(4);
 
-        const tx = await pool.tradeUniswapV3(
-            addressFrom,
-            addressTo,
-            amountOfFromToken.toString(),
-            feeTier,
-            slippageTolerance,
-            _this.gasInfo
-        );
-        // helpers.log(tx);
-        await _this.logTransaction(txsRef, tx, Dapp.UNISWAPV3, 'swap', pool.network, addressFrom, tokens, amountOfFromToken, addressTo);
+        if (await _this.isRepeatedlyFailedTransaction(txsRef, method, address, amount, dapp) === false) {
+            
+            const tx = await pool.tradeUniswapV3(
+                addressFrom,
+                addressTo,
+                amountOfFromToken.toString(),
+                feeTier,
+                slippageTolerance,
+                _this.gasInfo
+            );
+            // helpers.log(tx);
+            await _this.logTransaction(txsRef, tx, dapp, method, pool.network, addressFrom, tokens, amountOfFromToken, addressTo);
 
-        return await _this.updateBalances(
-            tokens, 
-            'swap', 
-            amountOfFromToken, 
-            addressFrom, 
-            addressTo, 
-            pool.network, 
-            slippageTolerance * 2
-        );
+            return await _this.updateBalances(
+                tokens, 
+                method, 
+                amountOfFromToken, 
+                addressFrom, 
+                addressTo, 
+                pool.network, 
+                slippageTolerance * 1.5
+            );
+        }
+
+        helpers.log('WE DID NOT TRY THIS TRANSACTION BECAUSE IT PROBABLY WOULD HAVE FAILED.');
+        return tokens;
 }
 
 /**
@@ -517,7 +525,7 @@ exports.tradeUniswap = async (
     dapp = 'SUSHISWAP'
 ) => {
     helpers.log('SWAP WITH ' + dapp);
-    await helpers.delay(3);
+    await helpers.delay(4);
 
     let router;
     switch (dapp) {
@@ -562,22 +570,23 @@ exports.tradeUniswap = async (
 exports.lendDeposit = async (pool, txsRef, tokens, address, amount) => {
     helpers.log('LEND DEPOSIT TO AAVE V2');
     const method = 'lend';
-    await helpers.delay(3);
+    const dapp = Dapp.AAVE;
+    await helpers.delay(4);
 
     // Trying to fix an issue with repeat failed transactions
-    const symbol = _this.addressToSymbol(address, pool.network);
-    const decimals = _this.tokens[pool.network][symbol].decimals;
-    amount = _this.decimalToInteger(amount * 0.995, decimals);
+    // const symbol = _this.addressToSymbol(address, pool.network);
+    // const decimals = _this.tokens[pool.network][symbol].decimals;
+    // amount = _this.decimalToInteger(amount * 0.995, decimals);
 
-    if (_this.isRepeatedlyFailedTransaction(txsRef, method, address, amount) === true) {
+    if (_this.isRepeatedlyFailedTransaction(txsRef, method, address, amount) === false) {
         const tx = await pool.lend(
-            Dapp.AAVE, 
+            dapp, 
             address, 
             amount.toString(),
             0,
             _this.gasInfo
         );
-        await _this.logTransaction(txsRef, tx, Dapp.AAVE, method, pool.network, address, tokens, amount);
+        await _this.logTransaction(txsRef, tx, dapp, method, pool.network, address, tokens, amount);
     
         return await _this.updateBalances(tokens, method, amount, address);
     }
@@ -598,7 +607,7 @@ exports.lendDeposit = async (pool, txsRef, tokens, address, amount) => {
  */
 exports.borrowDebt = async (pool, txsRef, tokens, address, amount) => {
     helpers.log('BORROW TOKENS FROM AAVE V2');
-    await helpers.delay(3);
+    await helpers.delay(4);
 
     const tx = await pool.borrow(
         Dapp.AAVE, 
@@ -624,7 +633,7 @@ exports.borrowDebt = async (pool, txsRef, tokens, address, amount) => {
  */
 exports.repayDebt = async (pool, txsRef, tokens, address, amount) => {
     helpers.log('REPAY DEBT ON AAVE V2');
-    await helpers.delay(3);
+    await helpers.delay(4);
 
     const tx = await pool.repay(
         Dapp.AAVE, 
@@ -649,7 +658,7 @@ exports.repayDebt = async (pool, txsRef, tokens, address, amount) => {
  */
 exports.withdrawLentTokens = async (pool, txsRef, tokens, address, amount) => {
     helpers.log('WITHDRAW LENT TOKENS FROM AAVE V2');
-    await helpers.delay(3);
+    await helpers.delay(4);
 
     const tx = await pool.withdrawDeposit(
         Dapp.AAVE, 
@@ -694,7 +703,7 @@ exports.approveAllSpendingOnce = async (pool, txsRef, dapps = null) => {
 
         for (const dapp of dappsToApprove) {
             helpers.log('Approving spending of ' + token.address + ' on ' + dapp);
-            await helpers.delay(3);
+            await helpers.delay(4);
             
             const tx = await pool.approve(
                 dapp,
@@ -716,8 +725,9 @@ exports.approveAllSpendingOnce = async (pool, txsRef, dapps = null) => {
  * @param {String} method lend, repay, swap, etc.
  * @param {String} address A token's contract address
  * @param {Number} amount Amount to withdraw, in format compatible with ethers.BigNumber
+ * @param {String} dapp The dapp we're using
  */
-exports.isRepeatedlyFailedTransaction = async (txsRef, method, address, amount) => {
+exports.isRepeatedlyFailedTransaction = async (txsRef, method, address, amount, dapp) => {
     const transactionsSnapshot = await txsRef.orderBy('createdAt', 'desc').limit(2).get();
     
     if (helpers.snapshotToArray(transactionsSnapshot).length > 0) {
