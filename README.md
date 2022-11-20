@@ -59,3 +59,4 @@ An API that allows data scientists to effortlessly send trading signals to the d
 - The CoinMarketCap and Zapper API calls do not yet have a defensive [retry strategy](https://github.com/tim-kos/node-retry).
 - Currently we're only supporting pools on Polygon; see to the token list in the dhedge lib.
 - Signal providers are not notified if signals abruptly stop.
+- `maxLeverage` will be ignored if sent by a signal provider.
