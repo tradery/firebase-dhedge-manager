@@ -13,8 +13,8 @@ An API that allows data scientists to effortlessly send trading signals to the d
 - Run `firebase functions:secrets:set MNEMONIC` to set the recovery phrase for your dhedge manager wallet.
 - Run `firebase functions:secrets:set POOL_ADDRESS` to set the pool address that you wish to manage using the provided mnemonic.
 - Run `firebase functions:secrets:set PROVIDER` to set the RPC provider and API key. e.g. https://polygon-mainnet.infura.io/v3/your-code-here
-- Run `firebase functions:secrets:set COIN_MARKET_CAP_API_KEY` to set your CoinMarketCap API key. This enables price lookups.
-- Run `firebase functions:secrets:set ZAPPER_API_KEY` to set your Zapper API key. This enables AAVE portfolio lookups.
+- Run `firebase functions:secrets:set COIN_MARKET_CAP_API_KEY` to set your CoinMarketCap API key. This enables price lookups. Note that you may want to use a paid key to prevent this from failing abruptly.
+- Run `firebase functions:secrets:set ZAPPER_API_KEY` to set your Zapper API key. This enables AAVE portfolio lookups. Note that you may want to use a paid key to prevent this from failing abruptly.
 - Run `firebase functions:secrets:set POLYGONSCAN_API_KEY` to set your PolygonScan API key. This allows us to check for failed transactions.
 - Run `firebase functions:secrets:set LOCAL_BASEPATH` to set your local basepath for functions. This enables testing our pub/sub functions. e.g. `http://127.0.0.1:5002/[project-name]/us-central1/`
 - Run `firebase functions:secrets:set PRODUCTION_BASEPATH` to set your basepath for functions. This enables our pub/sub functions. e.g. `https://us-central1-[project-name].cloudfunctions.net/`
@@ -57,5 +57,5 @@ An API that allows data scientists to effortlessly send trading signals to the d
 - The dHedge v2 SDK does not yet support ganging multiple function calls into a single transaction.
 - The Mnemonic is saved as an ENV so we can only have one 'trader' for all portfolios. We may want to store in the db as an encrypted value so each portfolio can have different trading accounts.
 - The CoinMarketCap and Zapper API calls do not yet have a defensive [retry strategy](https://github.com/tim-kos/node-retry).
-- Currently we're only supporting pools on Polygon, due to the token list in the dhedge lib
-- Signal providers are not notified if signals abruptly stop. There are plans for PagerDuty integration.
+- Currently we're only supporting pools on Polygon; see to the token list in the dhedge lib.
+- Signal providers are not notified if signals abruptly stop.
