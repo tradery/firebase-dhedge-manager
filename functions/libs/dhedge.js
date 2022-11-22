@@ -197,7 +197,7 @@ exports.getBalanceInfo = (amount, decimals, tokenPriceUsd = null) => {
 }
 
 /**
- * Decial to Integer
+ * Decimal to Integer
  * 
  * @param {Float} amount Some decimal amount
  * @param {Integer} decimals Number of decimal places
