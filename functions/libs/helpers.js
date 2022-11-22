@@ -87,3 +87,59 @@ exports.getFirestoreUtcTimestamp = () => {
     const timestamp = new firestore.Timestamp(utcSecondsSinceEpoch, 0);
     return timestamp;
 }
+
+exports.countDecimals = (value) => {
+    if (!isFinite(value) || value === null) return 0;
+        
+    const text = value.toString()
+    // verify if number 0.000005 is represented as "5e-6"
+    if (text.indexOf('e-') > -1) {
+      const [base, trail] = text.split('e-');
+      const deg = parseInt(trail, 10);
+      return deg;
+    }
+    // count decimals for number in representation like "0.123456"
+    if (Math.floor(value) !== value) {
+        return (text.split(".")[1] === undefined) ? 0 : text.split(".")[1].length
+    }
+    
+    return 0;
+};
+
+exports.numberToSafeString = (value) => {
+    if (!isFinite(value) || value === null) return '0';
+
+    const text = value.toString()
+    
+    if (text.indexOf('e-') > -1) {
+        // verify if number 0.000005 is represented as "5e-6"
+        const [base, trail] = text.split('e-');
+        const [before, after] = base.split(".");
+        
+        let amount = '0.';
+        for (let i = 0; i < trail - 1; i++) {
+            amount += '0';
+        }
+        amount += (after === undefined) ? before : before + after;
+        return amount;
+
+    } else if (text.indexOf('e+') > -1) {
+        // verify if number 5000000 is represented as "5e+6"
+        const [base, trail] = text.split('e+');
+        const [before, after] = base.split(".");
+        let amount = before; 
+        let counter = trail;
+
+        if (after !== undefined) {
+            amount += after;
+            counter -= after.length;
+        }
+
+        for (let i = 0; i < counter; i++) {
+            amount += '0';
+        }
+        return amount;
+    }
+    
+    return text;
+};

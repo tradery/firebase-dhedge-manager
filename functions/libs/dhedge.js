@@ -504,7 +504,7 @@ exports.tradeUniswap = async (
         const tx = await pool.tradeUniswapV3(
             addressFrom,
             addressTo,
-            amountOfFromToken.toString(),
+            helpers.numberToSafeString(amountOfFromToken),
             feeTier,
             slippageTolerance,
             _this.gasInfo
@@ -562,7 +562,7 @@ exports.tradeUniswap = async (
         router,
         addressFrom,
         addressTo,
-        amountOfFromToken.toString(),
+        helpers.numberToSafeString(amountOfFromToken),
         slippageTolerance,
         _this.gasInfo
     );
@@ -608,7 +608,7 @@ exports.lendDeposit = async (pool, txsRef, tokens, address, amount) => {
     const tx = await pool.lend(
         dapp, 
         address, 
-        amount.toString(),
+        helpers.numberToSafeString(amount),
         0,
         _this.gasInfo
     );
@@ -634,7 +634,7 @@ exports.borrowDebt = async (pool, txsRef, tokens, address, amount) => {
     const tx = await pool.borrow(
         Dapp.AAVE, 
         address, 
-        amount.toString(),
+        helpers.numberToSafeString(amount),
         0,
         _this.gasInfo
     );
@@ -660,7 +660,7 @@ exports.repayDebt = async (pool, txsRef, tokens, address, amount) => {
     const tx = await pool.repay(
         Dapp.AAVE, 
         address, 
-        amount.toString(),
+        helpers.numberToSafeString(amount),
         _this.gasInfo
     );
     await _this.logTransaction(txsRef, tx, Dapp.AAVE, 'repay', pool.network, address, tokens, amount);
@@ -685,7 +685,7 @@ exports.withdrawLentTokens = async (pool, txsRef, tokens, address, amount) => {
     const tx = await pool.withdrawDeposit(
         Dapp.AAVE, 
         address, 
-        amount.toString(), 
+        helpers.numberToSafeString(amount), 
         _this.gasInfo
     );
     // helpers.log(tx);
