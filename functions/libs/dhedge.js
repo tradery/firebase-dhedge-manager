@@ -489,7 +489,7 @@ exports.tradeUniswap = async (
         helpers.log('SWAP WITH UNISWAP V3');
         const method = 'swap';
         const dapp = Dapp.UNISWAPV3;
-        await helpers.delay(4);
+        await helpers.delay(5);
 
         if (await _this.isRepeatedlyFailedTransaction(txsRef, method, addressFrom, amountOfFromToken, dapp) === true) {
             helpers.log('WE DID NOT TRY THIS TRANSACTION BECAUSE IT PROBABLY WOULD HAVE FAILED.');
@@ -547,7 +547,7 @@ exports.tradeUniswap = async (
     dapp = 'SUSHISWAP'
 ) => {
     helpers.log('SWAP WITH ' + dapp);
-    await helpers.delay(4);
+    await helpers.delay(5);
 
     let router;
     switch (dapp) {
@@ -593,7 +593,7 @@ exports.lendDeposit = async (pool, txsRef, tokens, address, amount) => {
     helpers.log('LEND DEPOSIT TO AAVE V2');
     const method = 'lend';
     const dapp = Dapp.AAVE;
-    await helpers.delay(4);
+    await helpers.delay(5);
 
     if (_this.isRepeatedlyFailedTransaction(txsRef, method, address, amount, dapp) === true) {
         // Trying to fix an issue with repeat failed transactions
@@ -629,18 +629,25 @@ exports.lendDeposit = async (pool, txsRef, tokens, address, amount) => {
  */
 exports.borrowDebt = async (pool, txsRef, tokens, address, amount) => {
     helpers.log('BORROW TOKENS FROM AAVE V2');
-    await helpers.delay(4);
+    const method = 'borrow';
+    const dapp = Dapp.AAVE;
+    await helpers.delay(5);
+
+    if (await _this.isRepeatedlyFailedTransaction(txsRef, method, address, amount, dapp) === true) {
+        helpers.log('WE DID NOT TRY THIS TRANSACTION BECAUSE IT PROBABLY WOULD HAVE FAILED.');
+        return tokens;
+    }
 
     const tx = await pool.borrow(
-        Dapp.AAVE, 
+        dapp, 
         address, 
         helpers.numberToSafeString(amount),
         0,
         _this.gasInfo
     );
-    await _this.logTransaction(txsRef, tx, Dapp.AAVE, 'borrow', pool.network, address, tokens, amount);
+    await _this.logTransaction(txsRef, tx, dapp, method, pool.network, address, tokens, amount);
 
-    return await _this.updateBalances(tokens, 'borrow', amount, address);
+    return await _this.updateBalances(tokens, method, amount, address);
 }
 
 /**
@@ -655,17 +662,24 @@ exports.borrowDebt = async (pool, txsRef, tokens, address, amount) => {
  */
 exports.repayDebt = async (pool, txsRef, tokens, address, amount) => {
     helpers.log('REPAY DEBT ON AAVE V2');
-    await helpers.delay(4);
+    const method = 'repay';
+    const dapp = Dapp.AAVE;
+    await helpers.delay(5);
+
+    if (await _this.isRepeatedlyFailedTransaction(txsRef, method, address, amount, dapp) === true) {
+        helpers.log('WE DID NOT TRY THIS TRANSACTION BECAUSE IT PROBABLY WOULD HAVE FAILED.');
+        return tokens;
+    }
 
     const tx = await pool.repay(
-        Dapp.AAVE, 
+        dapp, 
         address, 
         helpers.numberToSafeString(amount),
         _this.gasInfo
     );
-    await _this.logTransaction(txsRef, tx, Dapp.AAVE, 'repay', pool.network, address, tokens, amount);
+    await _this.logTransaction(txsRef, tx, dapp, method, pool.network, address, tokens, amount);
     
-    return await _this.updateBalances(tokens, 'repay', amount, address);
+    return await _this.updateBalances(tokens, method, amount, address);
 }
 
 /**
@@ -680,18 +694,25 @@ exports.repayDebt = async (pool, txsRef, tokens, address, amount) => {
  */
 exports.withdrawLentTokens = async (pool, txsRef, tokens, address, amount) => {
     helpers.log('WITHDRAW LENT TOKENS FROM AAVE V2');
-    await helpers.delay(4);
+    const method = 'withdraw';
+    const dapp = Dapp.AAVE;
+    await helpers.delay(5);
+
+    if (await _this.isRepeatedlyFailedTransaction(txsRef, method, address, amount, dapp) === true) {
+        helpers.log('WE DID NOT TRY THIS TRANSACTION BECAUSE IT PROBABLY WOULD HAVE FAILED.');
+        return tokens;
+    }
 
     const tx = await pool.withdrawDeposit(
-        Dapp.AAVE, 
+        dapp, 
         address, 
         helpers.numberToSafeString(amount), 
         _this.gasInfo
     );
     // helpers.log(tx);
-    await _this.logTransaction(txsRef, tx, Dapp.AAVE, 'withdraw', pool.network, address, tokens, amount);
+    await _this.logTransaction(txsRef, tx, dapp, method, pool.network, address, tokens, amount);
 
-    return await _this.updateBalances(tokens, 'withdraw', amount, address);
+    return await _this.updateBalances(tokens, method, amount, address);
 }
 
 /**
@@ -730,7 +751,7 @@ exports.approveAllSpendingOnce = async (pool, txsRef, dapps = null) => {
 
             for (const dapp of dappsToApprove) {
                 helpers.log('Approving spending of ' + symbol + ' on ' + dapp);
-                await helpers.delay(4);
+                await helpers.delay(5);
                 
                 const tx = await pool.approve(
                     dapp,
@@ -756,7 +777,7 @@ exports.approveAllSpendingOnce = async (pool, txsRef, dapps = null) => {
  * @param {String} dapp The dapp we're using
  */
  exports.isRepeatedlyFailedTransaction = async (txsRef, method, address, amount, dapp) => {
-    const transactionsSnapshot = await txsRef.orderBy('createdAt', 'desc').limit(8).get();
+    const transactionsSnapshot = await txsRef.orderBy('createdAt', 'desc').limit(20).get();
     const transactions = helpers.snapshotToArray(transactionsSnapshot);
     let counter = 0;
 
@@ -845,24 +866,24 @@ exports.logTransaction = async (
         tokenFromUsdPrice = (tokenFrom.usdPrice === undefined || tokenFrom.usdPrice === null) ? null : tokenFrom.usdPrice
         const amount = _this.getBalanceInfo(amountFromBn, tokenFrom.decimals, tokenFromUsdPrice);
 
-        // CLEAN OUT BIGNUMBERS
-        delete tokenFrom.balanceBn;
-        delete amount.balanceBn;
-        delete tx.maxPriorityFeePerGas;
-        delete tx.maxFeePerGas;
-        delete tx.gasLimit;
-        delete tx.value;
+        // CLEAN OUT BIGNUMBERS AND OTHER PROBLEMATIC DATA
         delete tx.wait;
+        tokenFrom.balanceBn = tokenFrom.balanceBn.toString();
+        amount.balanceBn = amount.balanceBn.toString();
+        tx.maxPriorityFeePerGas = tx.maxPriorityFeePerGas.toString();
+        tx.maxFeePerGas = tx.maxFeePerGas.toString();
+        tx.gasLimit = tx.gasLimit.toString();
+        tx.value = tx.value.toString();
 
         if (tokens !== null) {
             for (const walletSymbol in tokens['wallet']) {
-                delete tokens['wallet'][walletSymbol].balanceBn
+                tokens['wallet'][walletSymbol].balanceBn = tokens['wallet'][walletSymbol].balanceBn.toString();
             }
             for (const walletSymbol in tokens['aave']['supply']) {
-                delete tokens['aave']['supply'][walletSymbol].balanceBn
+                tokens['aave']['supply'][walletSymbol].balanceBn = tokens['aave']['supply'][walletSymbol].balanceBn.toString();
             }
             for (const walletSymbol in tokens['aave']['variable-debt']) {
-                delete tokens['aave']['variable-debt'][walletSymbol].balanceBn
+                tokens['aave']['variable-debt'][walletSymbol].balanceBn = tokens['aave']['variable-debt'][walletSymbol].balanceBn.toString();
             }
         }
         
@@ -884,7 +905,8 @@ exports.logTransaction = async (
         };
 
         if (tokenTo !== null) {
-            delete tokenTo.balanceBn;
+            // delete tokenTo.balanceBn;
+            tokenTo.balanceBn = tokenTo.balanceBn.toString();
             data.tokenTo = tokenTo;
         }
 
