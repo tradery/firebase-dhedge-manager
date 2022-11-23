@@ -63,8 +63,6 @@ describe("helpers numberToSafeString()", () => {
         expect(helpers.numberToSafeString('1e-31') === '0.0000000000000000000000000000001').to.be.true;
     });
 
-    console.log(helpers.numberToSafeString(2.077296479142265e+21));
-
     it("should work for large complex numbers", () => {
         expect(helpers.numberToSafeString(2.077296479142265e-21) === '0.000000000000000000002077296479142265').to.be.true;
         expect(helpers.numberToSafeString(2.077296479142265e+21) === '2077296479142265000000').to.be.true;
