@@ -185,7 +185,7 @@ exports.addressToTokenDetails = async (address, network = 'polygon') => {
  */
 exports.getBalanceInfo = (amount, decimals, tokenPriceUsd = null) => {
     const amountBn = ethers.BigNumber.from(amount.toString());
-    const balanceDecimal = parseFloat(ethers.utils.formatUnits(amountBn, decimals));
+    const balanceDecimal = parseFloat(ethers.utils.formatUnits(amountBn, decimals)) * 0.9999999999999999;
     const balanceInt = _this.decimalToInteger(balanceDecimal, decimals);
     const balanceUsd = (tokenPriceUsd === null) ? null : tokenPriceUsd * balanceDecimal;
     return {
@@ -204,7 +204,7 @@ exports.getBalanceInfo = (amount, decimals, tokenPriceUsd = null) => {
  * @returns {Integer} The value without decimals
  */
 exports.decimalToInteger = (amount, decimals) => {
-    const response = Math.round(amount*('1e' + decimals));
+    const response = Math.floor(amount*('1e' + decimals));
     return isFinite(response) ? response : null;
 }
 

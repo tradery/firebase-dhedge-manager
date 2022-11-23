@@ -78,29 +78,29 @@ exports = module.exports = functions
 
                 // Check wallet balances with dhedge
                 let tokens = await dhedge.getBalances(pool);
-                // helpers.log(tokens);
+                helpers.log(tokens);
 
-                let tx = null; 
-                if (tokens['wallet']['USDC'] !== undefined) {    
-                    tx = await dhedge.lendDeposit(
-                        pool, 
-                        txsRef, 
-                        tokens, 
-                        tokens['wallet']['USDC'].address, 
-                        tokens['wallet']['USDC'].balanceInt
-                    );
+                // let tx = null; 
+                // if (tokens['wallet']['USDC'] !== undefined) {    
+                //     tx = await dhedge.lendDeposit(
+                //         pool, 
+                //         txsRef, 
+                //         tokens, 
+                //         tokens['wallet']['USDC'].address, 
+                //         tokens['wallet']['USDC'].balanceInt
+                //     );
 
-                } else {
-                    tx = await dhedge.withdrawLentTokens(
-                        pool, 
-                        txsRef, 
-                        tokens, 
-                        tokens['aave']['supply']['USDC'].address, 
-                        tokens['aave']['supply']['USDC'].balanceInt
-                    );
-                }
+                // } else {
+                //     tx = await dhedge.withdrawLentTokens(
+                //         pool, 
+                //         txsRef, 
+                //         tokens, 
+                //         tokens['aave']['supply']['USDC'].address, 
+                //         tokens['aave']['supply']['USDC'].balanceInt
+                //     );
+                // }
                 
-                helpers.log(tx);
+                // helpers.log(tx);
                 
                 // Respond
                 response.status(200).send({ message: 'Success'});
