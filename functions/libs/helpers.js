@@ -109,7 +109,7 @@ exports.countDecimals = (value) => {
 exports.numberToSafeString = (value) => {
     if (!isFinite(value) || value === null) return '0';
 
-    const text = value.toString()
+    const text = value.toString();
     
     if (text.indexOf('e-') > -1) {
         // verify if number 0.000005 is represented as "5e-6"
