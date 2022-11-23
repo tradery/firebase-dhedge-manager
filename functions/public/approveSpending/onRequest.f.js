@@ -10,7 +10,7 @@ const dhedge = require('../../libs/dhedge');
 exports = module.exports = functions
     .runWith({
         // Ensure the function has enough memory and time to process
-        timeoutSeconds: 400,
+        timeoutSeconds: 540,
         memory: "1GB",
         secrets: [
             "API_KEY", 

@@ -19,15 +19,37 @@ An API that allows data scientists to effortlessly send trading signals to the d
 - Run `firebase functions:secrets:set LOCAL_BASEPATH` to set your local basepath for functions. This enables testing our pub/sub functions. e.g. `http://127.0.0.1:5002/[project-name]/us-central1/`
 - Run `firebase functions:secrets:set PRODUCTION_BASEPATH` to set your basepath for functions. This enables our pub/sub functions. e.g. `https://us-central1-[project-name].cloudfunctions.net/`
 
-
-### 4. Deploy the Functions to Production
+### 3. Deploy the Functions to Production
 - Run `firebase deploy` from the root directory of this project.
 
+### 4. Setup portfolios for each pool
+- Manually create your pool within the dHedge GUI
+- Manually login to your Firebase Firestore database and create a portfolio with at least the following info:
+```
+{ 
+    isActive: true,
+    network: "polygon",
+    poolContract: "0x..."
+}
+```
+
 ### 5. Approve Spending
-- Hit the `publicApproveSpendingOnRequest` route once for your pool each time you change the approve pool assets.
+- Hit the `publicApproveSpendingOnRequest` route once for your pool each time you change the approved pool assets. Note the body must include:
+```
+{ 
+    secret: "THE-FIRESTORE-PORTFOLIO-ID"
+}
+```
 
 ### 6. Send Signals
-- Send your signals to your endpoint.
+- Send your signals to your endpoint with the following info:
+```
+{ 
+    secret: "THE-FIRESTORE-PORTFOLIO-ID",
+    longToken: "YOUR-TOKEN-SYMBOL",
+    shortToken: "YOUR-TOKEN-SYMBOL"
+}
+```
 
 ## Notes on Functions
 ### Overview
@@ -36,7 +58,7 @@ An API that allows data scientists to effortlessly send trading signals to the d
 
 ### Local Development
 - Run `npm install` from `./functions`
-- Emulate Firebase Functions locally by running `firebase emulators:start` from the `functions` directory of this project.
+- Emulate Firebase Functions locally by running `firebase emulators:start --import=./firebaseData` from the `functions` directory of this project.
 - Test scheduled functions with `firebase functions:shell`. Call the function by name from within the shell. [Learn more](https://stackoverflow.com/a/69424195/17273215)
 - Sometimes emulators don't close their ports properly. Try this on Mac (of course updating it to match the port that was mistakenly left open) `lsof -t -i tcp:5002 | xargs kill`
 
@@ -60,3 +82,4 @@ An API that allows data scientists to effortlessly send trading signals to the d
 - Currently we're only supporting pools on Polygon; see to the token list in the dhedge lib.
 - Signal providers are not notified if signals abruptly stop.
 - `maxLeverage` will be ignored if sent by a signal provider.
+- New portfolios must be created manually

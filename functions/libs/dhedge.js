@@ -719,21 +719,27 @@ exports.approveAllSpendingOnce = async (pool, txsRef, dapps = null) => {
         ];
     }
 
-    const tokens = _this.tokens[pool.network];
-    for (const tokenSymbol in tokens) {
-        const token = tokens[tokenSymbol];
+    const composition = await pool.getComposition();
+    for (const asset of composition) {
+        const address = asset.asset;
+        const symbol = _this.addressToSymbol(address);
+        const decimals = _this.tokens[pool.network][symbol].decimals
+        
+        // Ignore tokens like AAVEV2, or zero balance assets
+        if (decimals !== null) {
 
-        for (const dapp of dappsToApprove) {
-            helpers.log('Approving spending of ' + token.address + ' on ' + dapp);
-            await helpers.delay(4);
-            
-            const tx = await pool.approve(
-                dapp,
-                token.address,
-                ethers.constants.MaxInt256,
-                _this.gasInfo
-            );
-            await _this.logTransaction(txsRef, tx, dapp, 'approve-spending', pool.network, token.address, null, ethers.constants.MaxInt256);
+            for (const dapp of dappsToApprove) {
+                helpers.log('Approving spending of ' + symbol + ' on ' + dapp);
+                await helpers.delay(4);
+                
+                const tx = await pool.approve(
+                    dapp,
+                    address,
+                    ethers.constants.MaxInt256,
+                    _this.gasInfo
+                );
+                await _this.logTransaction(txsRef, tx, dapp, 'approve-spending', pool.network, address, null, ethers.constants.MaxInt256);
+            }
         }
     }
 
