@@ -868,7 +868,7 @@ exports.logTransaction = async (
 
         // CLEAN OUT BIGNUMBERS AND OTHER PROBLEMATIC DATA
         delete tx.wait;
-        tokenFrom.balanceBn = tokenFrom.balanceBn.toString();
+        if (tokenFrom.balanceBn !== undefined) tokenFrom.balanceBn = tokenFrom.balanceBn.toString();
         amount.balanceBn = amount.balanceBn.toString();
         tx.maxPriorityFeePerGas = tx.maxPriorityFeePerGas.toString();
         tx.maxFeePerGas = tx.maxFeePerGas.toString();
