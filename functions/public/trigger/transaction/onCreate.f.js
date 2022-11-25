@@ -45,12 +45,13 @@ exports = module.exports = functions
         if (isSuccessful !== true) {
             const portfolioDoc = await portfolioRef.get();
 
-            const message = 'Transaction failed while trying to ' + transactionDoc.data()._method
+            const message = 'Transaction ID ' + transactionId
+                + ' failed while trying to ' + transactionDoc.data()._method
                 + ' ' + transactionDoc.data().amount.balanceDecimal
                 + ' ' + dhedge.addressToSymbol(transactionDoc.data().tokenFrom.address)
                 + ' using ' + transactionDoc.data().dapp
                 + ' within the pool: ' + portfolioDoc.data().fundName
-                + '.'
+                + '. For more details see: ' + transactionDoc.data()._url;
             throw new Error(message);
         }
     });
