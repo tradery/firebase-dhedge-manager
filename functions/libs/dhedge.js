@@ -800,6 +800,8 @@ exports.approveAllSpendingOnce = async (pool, txsRef, dapps = null) => {
                 && helpers.numberToSafeString(transaction.data.amount.balanceInt) === helpers.numberToSafeString(amount)
                 && transaction.data._status === 'fail')
                 {
+                    helpers.log('Found matching failed transaction');
+                    helpers.log(transaction.data);
                     counter++;
                 }
         }
