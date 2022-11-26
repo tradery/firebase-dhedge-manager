@@ -184,7 +184,7 @@ exports.addressToTokenDetails = async (address, network = 'polygon') => {
  * @returns {Object} A list of balances in different formats
  */
 exports.getBalanceInfo = (amount, decimals, tokenPriceUsd = null) => {
-    const amountBn = ethers.BigNumber.from(helpers.numberToSafeString(amnount));
+    const amountBn = ethers.BigNumber.from(helpers.numberToSafeString(amount));
     const balanceDecimal = parseFloat(ethers.utils.formatUnits(amountBn, decimals)) * 0.9999999999999999;
     const balanceInt = _this.decimalToInteger(balanceDecimal, decimals);
     const balanceUsd = (tokenPriceUsd === null) ? null : tokenPriceUsd * balanceDecimal;
