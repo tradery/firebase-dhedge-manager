@@ -797,7 +797,7 @@ exports.approveAllSpendingOnce = async (pool, txsRef, dapps = null) => {
                 && transaction.data._method === method
                 && transaction.data.dapp === dapp
                 && transaction.data.tokenFrom.address === address
-                && transaction.data.amount.balanceInt === amount
+                && helpers.numberToSafeString(transaction.data.amount.balanceInt) === helpers.numberToSafeString(amount)
                 && transaction.data._status === 'fail')
                 {
                     counter++;
