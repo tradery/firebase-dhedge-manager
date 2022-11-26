@@ -1,6 +1,7 @@
 const chai = require('chai');
 const expect = chai.expect;
 const helpers = require('../libs/helpers');
+const { ethers } = require('@dhedge/v2-sdk');
 
 describe("helpers countDecimals()", () => {
     
@@ -66,6 +67,10 @@ describe("helpers numberToSafeString()", () => {
     it("should work for large complex numbers", () => {
         expect(helpers.numberToSafeString(2.077296479142265e-21) === '0.000000000000000000002077296479142265').to.be.true;
         expect(helpers.numberToSafeString(2.077296479142265e+21) === '2077296479142265000000').to.be.true;
+    });
+
+    it("should work for ethers.BigNumber values", () => {
+        expect(helpers.numberToSafeString(ethers.BigNumber.from("999")) === "999").to.be.true;
     });
 
 });
