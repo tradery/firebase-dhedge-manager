@@ -795,7 +795,7 @@ exports.approveAllSpendingOnce = async (pool, txsRef, dapps = null) => {
                 }
         }
 
-        if (counter >= 3) {
+        if (counter >= 2) {
             return true;
         }
     }

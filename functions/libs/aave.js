@@ -37,7 +37,7 @@ exports.reduceDebt = async (pool, txsRef, tokens, maxLeverage = _this.maxLeverag
             tokens = await _this.repayDebt(pool, txsRef, tokens, token, 'wallet', maxLeverage, liquidationHealthTarget);
 
             // Exit if our debt is suffiently paid off
-            if(_this.isDebtSufficientlyRepaid(tokens, maxLeverage, liquidationHealthTarget) === true) return tokens;
+            if (_this.isDebtSufficientlyRepaid(tokens, maxLeverage, liquidationHealthTarget) === true) return tokens;
     }
 
     // If we're here then our debt is not paid off
@@ -49,7 +49,7 @@ exports.reduceDebt = async (pool, txsRef, tokens, maxLeverage = _this.maxLeverag
             tokens = await _this.repayDebt(pool, txsRef, tokens, token, 'wallet', maxLeverage, liquidationHealthTarget);
 
             // Exit if our debt is suffiently paid off
-            if(_this.isDebtSufficientlyRepaid(tokens, maxLeverage, liquidationHealthTarget) === true) return tokens;
+            if (_this.isDebtSufficientlyRepaid(tokens, maxLeverage, liquidationHealthTarget) === true) return tokens;
         }
     }
     
@@ -67,7 +67,7 @@ exports.reduceDebt = async (pool, txsRef, tokens, maxLeverage = _this.maxLeverag
             tokens = await _this.repayDebt(pool, txsRef, tokens, supplyToken, 'supply', maxLeverage, _this.liquidationHealthFloor);
 
             // Exit if our debt is suffiently paid off
-            if(_this.isDebtSufficientlyRepaid(tokens, maxLeverage, liquidationHealthTarget) === true) return tokens;
+            if (_this.isDebtSufficientlyRepaid(tokens, maxLeverage, liquidationHealthTarget) === true) return tokens;
         }
     }
 
