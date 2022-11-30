@@ -69,9 +69,10 @@ exports.tokens = {
     }
 };
 
-exports.gasInfo = {
-    gasPrice: ethers.utils.parseUnits('500', 'gwei'),
-    gasLimit: 10000000
+exports.getGasInfo = async(pool) => {
+    return {
+        gasPrice: await pool.signer.provider.getGasPrice()
+    };
 };
 
 exports.swapSlippageTolerance = 2;
@@ -187,7 +188,7 @@ exports.addressToTokenDetails = async (address, network = 'polygon') => {
  */
 exports.getBalanceInfo = (amount, decimals, tokenPriceUsd = null) => {
     const amountBn = ethers.BigNumber.from(helpers.numberToSafeString(amount));
-    const balanceDecimal = parseFloat(ethers.utils.formatUnits(amountBn, decimals)) * 0.9999999999999999;
+    const balanceDecimal = parseFloat(ethers.utils.formatUnits(amountBn, decimals)) * 0.999999999999999;
     const balanceInt = _this.decimalToInteger(balanceDecimal, decimals);
     const balanceUsd = (tokenPriceUsd === null) ? null : tokenPriceUsd * balanceDecimal;
     return {
@@ -205,7 +206,7 @@ exports.getBalanceInfo = (amount, decimals, tokenPriceUsd = null) => {
  * @param {Integer} decimals Number of decimal places
  * @returns {Integer} The value without decimals
  */
-exports.decimalToInteger = (amount, decimals) => {
+exports.decimalToInteger = (amount, decimals = 18) => {
     const response = Math.floor(amount*('1e' + decimals));
     return isFinite(response) ? response : null;
 }
@@ -509,7 +510,7 @@ exports.tradeUniswap = async (
             helpers.numberToSafeString(amountOfFromToken),
             feeTier,
             slippageTolerance,
-            _this.gasInfo
+            await _this.getGasInfo(pool)
         );
         // helpers.log(tx);
         await _this.logTransaction(txsRef, tx, dapp, method, pool.network, addressFrom, tokens, amountOfFromToken, addressTo);
@@ -566,7 +567,7 @@ exports.tradeUniswap = async (
         addressTo,
         helpers.numberToSafeString(amountOfFromToken),
         slippageTolerance,
-        _this.gasInfo
+        await _this.getGasInfo(pool)
     );
     await _this.logTransaction(txsRef, tx, router, 'swap', pool.network, addressFrom, tokens, amountOfFromToken, addressTo);
 
@@ -612,7 +613,7 @@ exports.lendDeposit = async (pool, txsRef, tokens, address, amount) => {
         address, 
         helpers.numberToSafeString(amount),
         0,
-        _this.gasInfo
+        await _this.getGasInfo(pool)
     );
     await _this.logTransaction(txsRef, tx, dapp, method, pool.network, address, tokens, amount);
 
@@ -645,7 +646,7 @@ exports.borrowDebt = async (pool, txsRef, tokens, address, amount) => {
         address, 
         helpers.numberToSafeString(amount),
         0,
-        _this.gasInfo
+        await _this.getGasInfo(pool)
     );
     await _this.logTransaction(txsRef, tx, dapp, method, pool.network, address, tokens, amount);
 
@@ -677,7 +678,7 @@ exports.repayDebt = async (pool, txsRef, tokens, address, amount) => {
         dapp, 
         address, 
         helpers.numberToSafeString(amount),
-        _this.gasInfo
+        await _this.getGasInfo(pool)
     );
     await _this.logTransaction(txsRef, tx, dapp, method, pool.network, address, tokens, amount);
     
@@ -709,7 +710,7 @@ exports.withdrawLentTokens = async (pool, txsRef, tokens, address, amount) => {
         dapp, 
         address, 
         helpers.numberToSafeString(amount), 
-        _this.gasInfo
+        await _this.getGasInfo(pool)
     );
     // helpers.log(tx);
     await _this.logTransaction(txsRef, tx, dapp, method, pool.network, address, tokens, amount);
@@ -759,7 +760,7 @@ exports.approveAllSpendingOnce = async (pool, txsRef, dapps = null) => {
                     dapp,
                     address,
                     ethers.constants.MaxInt256,
-                    _this.gasInfo
+                    await _this.getGasInfo(pool)
                 );
                 await _this.logTransaction(txsRef, tx, dapp, 'approve-spending', pool.network, address, null, ethers.constants.MaxInt256);
             }
