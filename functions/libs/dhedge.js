@@ -36,30 +36,30 @@ exports.tokens = {
             coinMarketCapId: 1975,
             aaveLiquidationThreshold: 0.65,
         },
-        // CRV: {
-        //     address:  '0x172370d5cd63279efa6d502dab29171933a610af',
-        //     decimals: 18,
-        //     coinMarketCapId: 6538,
-        //     aaveLiquidationThreshold: 0,
-        // },
-        // AAVE: {
-        //     address:  '0xd6df932a45c0f255f85145f286ea0b292b21c90b',
-        //     decimals: 18,
-        //     coinMarketCapId: 7278,
-        //     aaveLiquidationThreshold: 0,
-        // },
-        // UNI: {
-        //     address:  '0xb33eaad8d922b1083446dc23f610c2567fb5180f',
-        //     decimals: 18,
-        //     coinMarketCapId: 7083,
-        //     aaveLiquidationThreshold: 0,
-        // },
-        // GRT: {
-        //     address:  '0x5fe2b58c013d7601147dcdd68c143a77499f5531',
-        //     decimals: 18,
-        //     coinMarketCapId: 6719,
-        //     aaveLiquidationThreshold: 0,
-        // },
+        CRV: {
+            address:  '0x172370d5cd63279efa6d502dab29171933a610af',
+            decimals: 18,
+            coinMarketCapId: 6538,
+            aaveLiquidationThreshold: 0,
+        },
+        AAVE: {
+            address:  '0xd6df932a45c0f255f85145f286ea0b292b21c90b',
+            decimals: 18,
+            coinMarketCapId: 7278,
+            aaveLiquidationThreshold: 0,
+        },
+        UNI: {
+            address:  '0xb33eaad8d922b1083446dc23f610c2567fb5180f',
+            decimals: 18,
+            coinMarketCapId: 7083,
+            aaveLiquidationThreshold: 0,
+        },
+        GRT: {
+            address:  '0x5fe2b58c013d7601147dcdd68c143a77499f5531',
+            decimals: 18,
+            coinMarketCapId: 6719,
+            aaveLiquidationThreshold: 0,
+        },
         AAVEV2: {
             address:  '0x8dff5e27ea6b7ac08ebfdf9eb090f32ee9a30fcf',
             decimals: null,
@@ -114,11 +114,12 @@ exports.getBalances = async (pool) => {
 
     // GET WALLET BALANCES FROM THE POOL
     for (const asset of composition) {
-        const token = await _this.createNewToken(asset.asset, asset.balance, pool.network);
-        
+        const tokenDetails = await _this.addressToTokenDetails(asset.asset, pool.network);
+        const tokenBalance = _this.getBalanceInfo(asset.balance, tokenDetails.decimals);
+
         // Ignore tokens like AAVEV2, or zero balance assets
-        if (token.decimals !== null && token.balanceInt !== 0) {
-            assets['wallet'][token.symbol] = token;
+        if (tokenDetails.decimals !== null && tokenBalance.balanceInt !== 0) {
+            assets['wallet'][tokenDetails.symbol] = await _this.createNewToken(asset.asset, asset.balance, pool.network);
         }
     }
 
@@ -138,6 +139,10 @@ exports.getBalances = async (pool) => {
  */
 exports.createNewToken = async (address, balance = 0, network = 'polygon') => {
     const tokenDetails = await _this.addressToTokenDetails(address, network);
+    
+    // Get usd price from coin market cap
+    tokenDetails.usdPrice = await coinmarketcap.getUsdPrice(tokenDetails.coinMarketCapId);
+
     const tokenBalance = _this.getBalanceInfo(
         balance, 
         tokenDetails.decimals,
@@ -158,15 +163,12 @@ exports.addressToTokenDetails = async (address, network = 'polygon') => {
     for (const tokenSymbol in tokens) {
         const token = tokens[tokenSymbol];
         if (token.address.toLowerCase() === address.toLowerCase()) {
-            // Get usd price from coin market cap
-            const usdPrice = await coinmarketcap.getUsdPrice(token.coinMarketCapId);
-
+            
             // Transform into object
             return {
                 symbol: tokenSymbol,
                 address: address.toLowerCase(),
                 decimals: token.decimals,
-                usdPrice: usdPrice,
                 liquidationThreshold: token.aaveLiquidationThreshold,
                 coinMarketCapId: token.coinMarketCapId
             };
@@ -595,7 +597,7 @@ exports.lendDeposit = async (pool, txsRef, tokens, address, amount) => {
     const dapp = Dapp.AAVE;
     await helpers.delay(5);
 
-    if (_this.isRepeatedlyFailedTransaction(txsRef, method, address, amount, dapp) === true) {
+    if (await _this.isRepeatedlyFailedTransaction(txsRef, method, address, amount, dapp) === true) {
         // Trying to fix an issue with repeat failed transactions
         // const symbol = _this.addressToSymbol(address, pool.network);
         // const decimals = _this.tokens[pool.network][symbol].decimals;
@@ -780,7 +782,7 @@ exports.approveAllSpendingOnce = async (pool, txsRef, dapps = null) => {
     // const transactionsSnapshot = await txsRef
     //     .where('_method', '==', method)
     //     .where('tokenFrom.address', '==', address)
-    //     .where('amount.balanceInt', '==', amount)
+    //     .where('amount.balanceBn', '==', helpers.numberToSafeString(amount))
     //     .where('dapp', '==', dapp)
     //     .where('_status', '==', 'fail')
     //     .orderBy('createdAt', 'desc')
@@ -797,21 +799,15 @@ exports.approveAllSpendingOnce = async (pool, txsRef, dapps = null) => {
                 && transaction.data._method === method
                 && transaction.data.dapp === dapp
                 && transaction.data.tokenFrom.address === address
-                && helpers.numberToSafeString(transaction.data.amount.balanceInt) === helpers.numberToSafeString(amount)
+                && transaction.data.amount.balanceBn === helpers.numberToSafeString(amount)
                 && transaction.data._status === 'fail')
                 {
-                    helpers.log('Found matching failed transaction');
-                    helpers.log(transaction.data);
                     counter++;
                 }
         }
-
-        if (counter >= 2) {
-            return true;
-        }
     }
 
-    return false;
+    return (counter >= 2) ? true : false;
 }
 
 exports.logTransaction = async (
@@ -864,12 +860,7 @@ exports.logTransaction = async (
                 break;
         }
 
-        helpers.log("TOKEN FROM: " + tokenFromSymbol);
-        helpers.log(tokenFrom);
-
         if (tokenFrom === undefined) {
-            helpers.log("TOKENS LIST: ");
-            helpers.log(tokens);
             tokenFrom = await _this.createNewToken(tokenFromAddress, amountFromBn, network)
         }
 
@@ -921,10 +912,14 @@ exports.logTransaction = async (
             data.tokenTo = tokenTo;
         }
 
+        if (tokenFrom.symbol !== undefined) {
+            data._tokenFromSymbol = tokenFrom.symbol;
+        }
+
         // Save the new signal
         const transaction = await txsRef.doc().set(data);
 
-        helpers.log("TRANSACTION DETAILS...");
+        helpers.log("LOGGING TRANSACTION DETAILS...");
         helpers.log(data);
 
         return transaction;
