@@ -16,6 +16,8 @@ An API that allows data scientists to effortlessly send trading signals to the d
 - Run `firebase functions:secrets:set COIN_MARKET_CAP_API_KEY` to set your CoinMarketCap API key. This enables price lookups. Note that you may want to use a paid key to prevent this from failing abruptly.
 - Run `firebase functions:secrets:set ZAPPER_API_KEY` to set your Zapper API key. This enables AAVE portfolio lookups. Note that you may want to use a paid key to prevent this from failing abruptly.
 - Run `firebase functions:secrets:set POLYGONSCAN_API_KEY` to set your PolygonScan API key. This allows us to check for failed transactions.
+- Run `firebase functions:secrets:set TWILIO_ACCOUNT_SID`, `firebase functions:secrets:set TWILIO_AUTH_TOKEN`, `firebase functions:secrets:set TWILIO_FROM_NUMBER`, and `firebase functions:secrets:set TWILIO_TO_NUMBER` to set your Twilio account ID, auth token, from phone number, and to phone number. We use Twilio to report critical outages to the `TWILIO_TO_NUMBER` phone number, such as when transactions fail over and over. See [the Twilio docs](https://www.twilio.com/docs/libraries/node) for more.
+- Run `firebase functions:secrets:set POLYGONSCAN_API_KEY` to set your PolygonScan API key. This allows us to check for failed transactions.
 - Run `firebase functions:secrets:set LOCAL_BASEPATH` to set your local basepath for functions. This enables testing our pub/sub functions. e.g. `http://127.0.0.1:5002/[project-name]/us-central1/`
 - Run `firebase functions:secrets:set PRODUCTION_BASEPATH` to set your basepath for functions. This enables our pub/sub functions. e.g. `https://us-central1-[project-name].cloudfunctions.net/`
 

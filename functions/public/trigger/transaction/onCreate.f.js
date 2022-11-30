@@ -10,10 +10,14 @@ const dhedge = require('./../../../libs/dhedge');
 exports = module.exports = functions
     .runWith({
         // Ensure the function has enough memory and time to process every market
-        timeoutSeconds: 400,
+        timeoutSeconds: 540,
         memory: "1GB",
         secrets: [
             "POLYGONSCAN_API_KEY",
+            "TWILIO_ACCOUNT_SID",
+            "TWILIO_AUTH_TOKEN",
+            "TWILIO_FROM_NUMBER",
+            "TWILIO_TO_NUMBER",
         ],
     })
     .firestore
@@ -51,7 +55,17 @@ exports = module.exports = functions
                 + ' ' + dhedge.addressToSymbol(transactionDoc.data().tokenFrom.address)
                 + ' using ' + transactionDoc.data().dapp
                 + ' within the pool: ' + portfolioDoc.data().fundName
+                + ' (' + portfolioDoc.data().modelName + ')'
                 + '. For more details see: ' + transactionDoc.data()._url;
+
+            // Send an SMS to note that there is an issue
+            const client = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+            await client.messages
+                .create({
+                    body: message, 
+                    from: process.env.TWILIO_FROM_NUMBER, 
+                    to: process.env.TWILIO_TO_NUMBER
+            });
             throw new Error(message);
         }
     });

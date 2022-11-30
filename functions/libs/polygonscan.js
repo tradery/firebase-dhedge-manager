@@ -45,7 +45,7 @@ const helpers = require('./helpers');
             counter++;
         }
 
-    } while (status === null && counter < 4);
+    } while (status === null && counter < 6);
     
     return status
 }

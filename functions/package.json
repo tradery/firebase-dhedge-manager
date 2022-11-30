@@ -24,7 +24,8 @@
     "firebase-functions": "^3.24.1",
     "glob": "^7.2.0",
     "lodash": "^4.17.21",
-    "node-fetch": "^2.6.6"
+    "node-fetch": "^2.6.6",
+    "twilio": "^3.83.3"
   },
   "devDependencies": {
     "chai": "^4.3.7",
