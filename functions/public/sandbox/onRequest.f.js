@@ -67,7 +67,7 @@ exports = module.exports = functions
                     throw new Error("This secret is not active.");
 
                 // Yay! We're authorized!
-                const { poolContract, network } = portfolioDoc.data();
+                const { poolContract, network, modelName } = portfolioDoc.data();
 
                 // SETUP A POOL
                 const pool = await dhedge.initPool(
@@ -76,32 +76,36 @@ exports = module.exports = functions
                     network
                 );
 
+                helpers.log('BEGINNING SANDBOX RUN of ' + modelName 
+                    + ' (' + poolContract + ').'
+                );
+
                 // Check wallet balances with dhedge
                 let tokens = await dhedge.getBalances(pool);
-                helpers.log(tokens);
+                // helpers.log(tokens);
 
-                let tx = null; 
+                const usdcAddress = '0x2791bca1f2de4661ed88a30c99a7a9449aa84174';
+                const amount = 10000000;
+
                 if (tokens['wallet']['USDC'] !== undefined) {    
-                    tx = await dhedge.lendDeposit(
+                    await dhedge.lendDeposit(
                         pool, 
                         txsRef, 
                         tokens, 
-                        tokens['wallet']['USDC'].address, 
-                        tokens['wallet']['USDC'].balanceInt
+                        usdcAddress, 
+                        amount
                     );
 
                 } else {
-                    tx = await dhedge.withdrawLentTokens(
+                    await dhedge.withdrawLentTokens(
                         pool, 
                         txsRef, 
                         tokens, 
-                        tokens['aave']['supply']['USDC'].address, 
-                        tokens['aave']['supply']['USDC'].balanceInt
+                        usdcAddress, 
+                        amount
                     );
                 }
-                
-                helpers.log(tx);
-                
+                                
                 // Respond
                 response.status(200).send({ message: 'Success'});
 
