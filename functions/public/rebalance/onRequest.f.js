@@ -76,7 +76,7 @@ exports = module.exports = functions
                 const txsRef = portfolioRef.collection('transactions');
 
                 // Yay! We're authorized!
-                const { poolContract, network } = portfolioDoc.data();
+                const { poolContract, network, modelName } = portfolioDoc.data();
                 
                 // Get the last signal sent to this portfolio
                 const signalsSnapshot = await signalsRef.orderBy('createdAt', 'desc').limit(1).get();
@@ -87,11 +87,12 @@ exports = module.exports = functions
                     ? aave.maxLeverage
                     : lastSignal.data.maxLeverage;
                 
-                helpers.log('Last signal ID: ' + lastSignal.id);
-                helpers.log('Long Token:     ' + longSymbol);
-                helpers.log('Short Token:    ' + shortSymbol);
-                helpers.log('Max Leverage:   ' + maxLeverage);
-                helpers.log('Pool Contract:  ' + poolContract);
+                helpers.log('BEGINNING REBALANCING of ' + modelName 
+                    + ' (' + poolContract + ').'
+                    + ' We\'re long ' + longSymbol
+                    + ' and short ' + shortSymbol
+                    + ' with max leverage of ' + maxLeverage + '.'
+                );
 
                 /**
                  * @TODO replace mnemonic env with decrypted value from db
@@ -127,7 +128,7 @@ exports = module.exports = functions
                         }
                     }
 
-                    helpers.log('Now we should be holding only USDC and have AAVE cleared');
+                    helpers.log('Now we should be holding only USDC and have all AAVE debt & supply cleared');
                     
                 } else {
                     // REDUCE ANY DEBT THAT DOES !== SHORT SYMBOL
@@ -162,21 +163,16 @@ exports = module.exports = functions
                     }
                     
                     // OPTIMIZE BORROWING DEBT
-                    helpers.log('This is where we borrow ' + shortSymbol
-                        + ' and swap into ' + longSymbol + ' until we reach target leverage or liquidaton health cieling');
                     tokens = await aave.increaseDebt(pool, txsRef, tokens, shortSymbol, longSymbol, maxLeverage, aave.liquidationHealthTargetCeiling);
                     
                     // OPTIMIZE REPAYING DEBT
-                    helpers.log('This is where, if needed, we withdrawl ' + longSymbol
-                        + ' and swap into ' + shortSymbol + ' and repay debt until we reach our liquidaton health floor');
                     tokens = await aave.reduceDebt(pool, txsRef, tokens, maxLeverage, aave.liquidationHealthTargetFloor);
 
-                    helpers.log('Now our wallet should be empty, not counting dust, and AAVE has optimized leverage'
+                    helpers.log('Now our wallet should be empty, not counting dust, and AAVE should have optimized leverage'
                         + ' with ' + longSymbol + ' supplied as collateral for ' + shortSymbol + ' debt');
                 }
-
-                helpers.log(tokens);
                 
+                helpers.log('REBALANCING COMPLETE');
                 response.status(200).send({ message: 'Rebalance complete!' });
 
                 // Termininate the function
