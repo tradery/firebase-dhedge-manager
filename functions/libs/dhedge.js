@@ -71,7 +71,9 @@ exports.tokens = {
 
 exports.getGasInfo = async(pool) => {
     return {
-        gasPrice: await pool.signer.provider.getGasPrice()
+        //gasPrice: await pool.signer.provider.getGasPrice()
+        gasPrice: ethers.utils.parseUnits('500', 'gwei'),
+        gasLimit: 10000000
     };
 };
 
