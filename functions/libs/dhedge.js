@@ -779,35 +779,24 @@ exports.approveAllSpendingOnce = async (pool, txsRef, dapps = null) => {
  * @param {String} dapp The dapp we're using
  */
  exports.isRepeatedlyFailedTransaction = async (txsRef, method, address, amount, dapp) => {
-    // const transactionsSnapshot = await txsRef
-    //     .where('_method', '==', method)
-    //     .where('tokenFrom.address', '==', address)
-    //     .where('amount.balanceBn', '==', helpers.numberToSafeString(amount))
-    //     .where('dapp', '==', dapp)
-    //     .where('_status', '==', 'fail')
-    //     .orderBy('createdAt', 'desc')
-    //     .limit(3).get();
-    const transactionsSnapshot = await txsRef.orderBy('createdAt', 'desc').limit(20).get();
+    const transactionsSnapshot = await txsRef
+        .where('_method', '==', method)
+        .where('tokenFrom.address', '==', address)
+        .where('amount.balanceBn', '==', helpers.numberToSafeString(amount))
+        .where('dapp', '==', dapp)
+        .where('_status', '==', 'fail')
+        .orderBy('createdAt', 'desc')
+        .limit(3).get();
     const transactions = helpers.snapshotToArray(transactionsSnapshot);
-    // if (transactions.length === 3) return true;
-    let counter = 0;
 
-    if (transactions.length > 0) {
-
-        for (const transaction of transactions) {
-            if (transaction.data !== undefined
-                && transaction.data._method === method
-                && transaction.data.dapp === dapp
-                && transaction.data.tokenFrom.address === address
-                && transaction.data.amount.balanceBn === helpers.numberToSafeString(amount)
-                && transaction.data._status === 'fail')
-                {
-                    counter++;
-                }
-        }
+    if (transactions.length === 3
+        && (transactions[0].data.rawTransaction.nonce    // newest failed transaction
+             - transactions[2].data.rawTransaction.nonce // third failed transaction
+             <= 100)) {
+                return true;
     }
 
-    return (counter >= 2) ? true : false;
+    return false;
 }
 
 exports.logTransaction = async (
