@@ -1,19 +1,49 @@
 {
-    "indexes": [
-      {
-        "collectionGroup": "tokenPrices",
-        "queryScope": "COLLECTION",
-        "fields": [
-          {
-            "fieldPath": "coinMarketCapId",
-            "order": "ASCENDING"
-          },
-          {
-            "fieldPath": "createdAt",
-            "order": "DESCENDING"
-          }
-        ]
-      }
-    ],
-    "fieldOverrides": []
+  "indexes": [
+    {
+      "collectionGroup": "tokenPrices",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "coinMarketCapId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "transactions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "_method",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "_status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "amount.balanceBn",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "dapp",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "tokenFrom.address",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": []
 }
