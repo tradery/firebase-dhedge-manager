@@ -56,7 +56,8 @@ exports = module.exports = functions
                 + ' using ' + transactionDoc.data().dapp
                 + ' within the pool: ' + portfolioDoc.data().fundName
                 + ' (' + portfolioDoc.data().modelName + ')'
-                + '. For more details see: ' + transactionDoc.data()._url;
+                + '. For more details see: ' + transactionDoc.data()._url
+                + ' p.s. Consider approving spending again if this pool continues to fail.'
 
             // Send an SMS to note that there is an issue
             const client = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
