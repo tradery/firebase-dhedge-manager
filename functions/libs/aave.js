@@ -58,8 +58,10 @@ exports.reduceDebt = async (pool, txsRef, tokens, maxLeverage = _this.maxLeverag
      */
     // If we're here then our debt is not paid off
     // Now we'll start selling supply tokens to pay more debt
-    while (_this.isDebtSufficientlyRepaid(tokens, maxLeverage, liquidationHealthTarget) === false) {
-        
+    let killCounter = 0;
+    while (_this.isDebtSufficientlyRepaid(tokens, maxLeverage, liquidationHealthTarget) === false
+           && killCounter < 6) {
+
         // Loop through our supply tokens
         for (const supplyTokenSymbol in tokens['aave']['supply']) {
             helpers.log('REPAYING ' + debtSymbol + ' DEBT FROM ' + supplyTokenSymbol + ' IN OUR AAVE SUPPLY');
@@ -69,6 +71,8 @@ exports.reduceDebt = async (pool, txsRef, tokens, maxLeverage = _this.maxLeverag
             // Exit if our debt is suffiently paid off
             if (_this.isDebtSufficientlyRepaid(tokens, maxLeverage, liquidationHealthTarget) === true) return tokens;
         }
+
+        killCounter++;
     }
 
     return tokens;
