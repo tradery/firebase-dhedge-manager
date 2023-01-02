@@ -202,7 +202,9 @@ exports.increaseDebt = async (
     liquidationHealthTarget = _this.liquidationHealthTargetCeiling
     ) => {
         // Check to see if we have room to take on more debt
-        while (_this.isSafeToBorrow(tokens, maxLeverage, liquidationHealthTarget) === true) {
+        let killCounter = 0;
+        while (_this.isSafeToBorrow(tokens, maxLeverage, liquidationHealthTarget) === true
+               && killCounter < 6) {
 
             helpers.log('INCREASING DEBT...'
                 + ' It\'s safe to borrow more ' + shortSymbol
@@ -240,6 +242,8 @@ exports.increaseDebt = async (
                 helpers.log('Lending ~$' + longToken.balanceUsd + ' worth of ' + longSymbol + ' to AAVE supply');
                 tokens = await dhedge.lendDeposit(pool, txsRef, tokens, longToken.address, longToken.balanceInt);
             }
+
+            killCounter++;
         }
 
         return tokens;
